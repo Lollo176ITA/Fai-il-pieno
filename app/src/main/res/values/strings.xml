@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="Typos">
+    <string name="app_name">Fai il pieno</string>
+
+    <!-- Navigazione -->
+    <string name="tab_today">Oggi</string>
+    <string name="tab_map">Mappa</string>
+    <string name="tab_car">La mia auto</string>
+
+    <!-- Carburanti e modalità -->
+    <string name="fuel_benzina">Benzina</string>
+    <string name="fuel_gasolio">Gasolio</string>
+    <string name="fuel_gpl">GPL</string>
+    <string name="fuel_metano">Metano</string>
+    <string name="fuel_altro">Altro</string>
+    <string name="mode_self">Self</string>
+    <string name="mode_servito">Servito</string>
+    <string name="unit_per_liter">€/l</string>
+    <string name="unit_per_kg">€/kg</string>
+    <string name="price_spoken_liter">%1$s euro al litro</string>
+    <string name="price_spoken_kg">%1$s euro al chilo</string>
+    <string name="unit_liters">l</string>
+    <string name="unit_kg">kg</string>
+
+    <!-- Formati -->
+    <string name="format_price">%1$s %2$s</string>
+    <string name="format_euro">%1$s €</string>
+    <string name="format_meters">%1$d m</string>
+    <string name="format_km">%1$s km</string>
+    <string name="delta_below" tools:ignore="PluralsCandidate">−%1$d cent</string>
+    <string name="delta_above" tools:ignore="PluralsCandidate">+%1$d cent</string>
+    <string name="delta_equal">in media</string>
+    <plurals name="delta_below_a11y">
+        <item quantity="one">%1$d centesimo sotto la media nazionale</item>
+        <item quantity="other">%1$d centesimi sotto la media nazionale</item>
+    </plurals>
+    <plurals name="delta_above_a11y">
+        <item quantity="one">%1$d centesimo sopra la media nazionale</item>
+        <item quantity="other">%1$d centesimi sopra la media nazionale</item>
+    </plurals>
+    <string name="delta_equal_a11y">in linea con la media nazionale</string>
+
+    <!-- Filtri -->
+    <string name="filter_fuel_a11y">Carburante: %1$s. Tocca per cambiare</string>
+    <string name="filter_brands">Marchi</string>
+    <string name="filter_brands_count">Marchi (%1$d)</string>
+    <string name="filter_brands_title">Mostra solo questi marchi</string>
+    <string name="filter_brands_all">Tutti i marchi</string>
+    <string name="filter_apply">Applica</string>
+    <string name="sort_price">Prezzo</string>
+    <string name="sort_distance">Distanza</string>
+    <string name="brand_altri">Altri marchi</string>
+
+    <!-- Oggi -->
+    <string name="today_title">Oggi</string>
+    <string name="today_subtitle">%1$s · %2$s</string>
+    <string name="hero_label">Ti conviene</string>
+    <string name="hero_label_nearest">Il più vicino</string>
+    <string name="hero_saving">Risparmi %1$s</string>
+    <string name="hero_saving_detail">su un pieno da %1$s %2$s, deviazione inclusa</string>
+    <string name="hero_no_saving">Qui intorno i prezzi sono allineati: non conviene spostarsi.</string>
+    <string name="hero_distance">a %1$s</string>
+    <string name="hero_detour">%1$s di deviazione</string>
+    <string name="action_navigate">Portami lì</string>
+    <string name="action_details">Dettagli</string>
+    <string name="list_title">Distributori vicini</string>
+    <plurals name="list_subtitle">
+        <item quantity="one">%1$d distributore entro %2$s · %3$s</item>
+        <item quantity="other">%1$d distributori entro %2$s · %3$s</item>
+    </plurals>
+    <string name="station_row_a11y">%1$s, %2$s, a %3$s, %4$s</string>
+    <string name="hero_a11y">Consigliato: %1$s a %2$s, prezzo %3$s, %4$s</string>
+
+    <!-- Stati -->
+    <string name="state_downloading_title">Scarico i prezzi di oggi…</string>
+    <string name="state_downloading_text">Serve solo la prima volta: circa 8 MB.</string>
+    <string name="state_offline_title">Nessuna connessione</string>
+    <string name="state_offline_text">Scaricherò i prezzi appena torni online.</string>
+    <string name="state_download_failed_title">Download non riuscito</string>
+    <string name="state_download_failed_text">Il sito del ministero non risponde. Riprova tra poco.</string>
+    <string name="state_format_error_text">Il formato dei dati del ministero è cambiato. Aggiorna l\'app appena possibile.</string>
+    <string name="state_permission_title">Dove sei?</string>
+    <string name="state_permission_text">Per trovare i distributori vicini serve la tua posizione. Viene usata solo mentre l\'app è aperta e non esce mai dal telefono.</string>
+    <string name="state_permission_denied_text">Hai negato il permesso di posizione. Puoi attivarlo dalle impostazioni dell\'app.</string>
+    <string name="state_location_off_title">Localizzazione disattivata</string>
+    <string name="state_location_off_text">Attiva la localizzazione del telefono per vedere i distributori vicini.</string>
+    <string name="state_location_unavailable_title">Posizione non trovata</string>
+    <string name="state_location_unavailable_text">Non riesco a capire dove sei. Prova ad avvicinarti a una finestra o all\'aperto.</string>
+    <string name="state_locating">Cerco la tua posizione…</string>
+    <string name="state_empty_title">Nessun distributore trovato</string>
+    <string name="state_empty_text">Entro %1$s non ci sono distributori con prezzi aggiornati di %2$s.</string>
+    <string name="state_empty_brand_text">Nessun distributore dei marchi scelti entro %1$s.</string>
+    <string name="action_retry">Riprova</string>
+    <string name="action_allow_location">Consenti posizione</string>
+    <string name="action_open_settings">Apri impostazioni</string>
+    <string name="action_enable_location">Attiva localizzazione</string>
+    <string name="action_clear_brands">Mostra tutti i marchi</string>
+    <string name="warning_stale_data">Prezzi fermi al %1$s: non riesco ad aggiornarli.</string>
+    <string name="warning_offline">Sei offline: i prezzi sono quelli del %1$s.</string>
+    <string name="warning_updating">Aggiorno i prezzi…</string>
+    <string name="setup_car_hint">Imposta la tua auto per calcoli di risparmio più precisi.</string>
+    <string name="action_setup_car">Imposta</string>
+
+    <!-- Fonte dati (licenza IODL 2.0) -->
+    <string name="source_attribution">Fonte: Ministero delle Imprese e del Made in Italy</string>
+    <string name="source_date">Prezzi alle 8 del %1$s · Licenza IODL 2.0</string>
+    <string name="source_short">Fonte: MIMIT · prezzi del %1$s</string>
+    <string name="map_attribution">© OpenStreetMap · OpenFreeMap</string>
+
+    <!-- Dettaglio distributore -->
+    <string name="detail_prices">Prezzi</string>
+    <string name="detail_other_fuels">Altri carburanti</string>
+    <string name="detail_stale">non aggiornato dal %1$s</string>
+    <string name="detail_suspect">prezzo insolito, forse errato: non lo consideriamo</string>
+    <string name="detail_updated">aggiornato il %1$s</string>
+    <string name="detail_highway">Autostradale</string>
+    <string name="detail_no_prices">Nessun prezzo comunicato.</string>
+
+    <!-- Mappa -->
+    <string name="map_zoom_in_hint">Avvicinati per vedere i prezzi</string>
+    <string name="map_my_location">Vai alla mia posizione</string>
+    <string name="map_a11y">Mappa dei distributori con i prezzi. L\'elenco completo e accessibile è nella scheda Oggi.</string>
+    <string name="map_no_data">Nessun dato scaricato: apri la scheda Oggi.</string>
+    <string name="map_legend_below">sotto media</string>
+    <string name="map_legend_above">sopra media</string>
+
+    <!-- La mia auto -->
+    <string name="car_title">La mia auto</string>
+    <string name="car_fuel">Carburante</string>
+    <string name="car_tank">Capienza serbatoio</string>
+    <string name="car_tank_hint">Di solito tra 35 e 60 litri. La trovi sul libretto.</string>
+    <string name="car_consumption">Consumo medio</string>
+    <string name="car_consumption_hint">Se non lo sai, lascia il valore proposto: lo miglioreremo con i tuoi rifornimenti.</string>
+    <string name="car_unit_km_per_liter">km/l</string>
+    <string name="car_unit_liters_per_100">l/100 km</string>
+    <string name="car_unit_km_per_kg">km/kg</string>
+    <string name="car_unit_kg_per_100">kg/100 km</string>
+    <string name="car_service">Di solito fai</string>
+    <string name="car_save">Salva</string>
+    <string name="car_saved">Salvato</string>
+    <string name="car_invalid_number">Inserisci un numero valido</string>
+    <string name="car_data_title">Dati dei prezzi</string>
+    <string name="car_data_updated">Prezzi alle 8 del %1$s</string>
+    <string name="car_data_none">Nessun dato scaricato</string>
+    <string name="car_data_stats">%1$s distributori · %2$s prezzi</string>
+    <string name="car_data_refresh">Aggiorna ora</string>
+    <string name="car_data_license">I dati sono pubblicati dal Ministero delle Imprese e del Made in Italy con licenza IODL 2.0 e si riferiscono ai prezzi comunicati dai gestori alle 8 del mattino. I prezzi non aggiornati da più di 14 giorni e quelli più bassi del 20% rispetto alla mediana nazionale (quasi sempre errori) non vengono mostrati.</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_skip">Salta</string>
+    <string name="onboarding_next">Avanti</string>
+    <string name="onboarding_start">Inizia</string>
+    <string name="onboarding_page">Pagina %1$d di %2$d</string>
+    <string name="onboarding_1_title">Fai il pieno dove conviene</string>
+    <string name="onboarding_1_text">Ogni giorno confrontiamo i prezzi ufficiali di tutti i distributori italiani e ti diciamo dove andare e quanto risparmi.</string>
+    <string name="onboarding_2_title">Che carburante usi?</string>
+    <string name="onboarding_2_text">Puoi cambiarlo quando vuoi dalla scheda La mia auto.</string>
+    <string name="onboarding_3_title">Distributori vicino a te</string>
+    <string name="onboarding_3_text">Usiamo la posizione solo mentre l\'app è aperta. Tutti i calcoli avvengono sul telefono.</string>
+    <string name="onboarding_location_granted">Posizione consentita</string>
+</resources>
