@@ -24,23 +24,26 @@ Il percorso dell'SDK va in `local.properties` (Android Studio lo crea da solo):
 sdk.dir=C\:/Users/<utente>/AppData/Local/Android/Sdk
 ```
 
-### Chiave OpenRouteService (dalla fase 2)
+### Chiave OpenRouteService
 
-Il calcolo dei percorsi abituali userà [OpenRouteService](https://openrouteservice.org/).
-La chiave va **solo** in `local.properties`, che è escluso da git:
+Percorsi abituali e ricerca degli indirizzi usano [OpenRouteService](https://openrouteservice.org/)
+tramite l'host `api.heigit.org` (il vecchio `api.openrouteservice.org` è stato dismesso).
+La chiave va **solo** in `local.properties`,
+che è escluso da git:
 
 ```properties
 ORS_API_KEY=la-tua-chiave
 ```
 
-Non inserire mai chiavi nel codice o in file versionati.
+Non inserire mai chiavi nel codice o in file versionati. Senza chiave l'app funziona lo stesso,
+ma percorsi e ricerca degli indirizzi mostrano un avviso.
 
 ## Struttura
 
 | Modulo | Tipo | Contenuto |
 |---|---|---|
-| `:domain` | Kotlin/JVM puro | Modelli, parser CSV in streaming, normalizzazione dei marchi, classificazione dei carburanti, geometria (Haversine, bounding box), risparmio netto, classifica dei distributori |
-| `:data` | Libreria Android | Room, DataStore, download OkHttp, WorkManager, posizione (LocationManager, senza Google Play Services) |
+| `:domain` | Kotlin/JVM puro | Modelli, parser CSV in streaming, normalizzazione dei marchi, classificazione dei carburanti, geometria (Haversine, bounding box, polyline, distanza punto-segmento, fascia attorno al percorso), risparmio netto, classifica dei distributori vicini e lungo i tragitti |
+| `:data` | Libreria Android | Room, DataStore, download OkHttp, WorkManager, posizione (LocationManager, senza Google Play Services), client OpenRouteService/Pelias |
 | `:app` | Applicazione | Jetpack Compose, Material 3 Expressive, navigazione, ViewModel |
 
 La logica sta in `:domain`, quindi i test girano sulla JVM senza emulatore.
@@ -87,6 +90,18 @@ risparmio = (prezzo_medio_zona − prezzo) × litri − km_deviazione × consumo
 - **Litri:** un rifornimento tipico, pari all'80% del serbatoio.
 - **Deviazione:** i km in più, andata e ritorno, rispetto al distributore più vicino.
 - **Consiglio:** un distributore viene proposto solo se il risparmio è positivo.
+
+### Percorsi abituali
+
+- L'utente salva i luoghi (Casa, Lavoro, Università, altri) cercando l'indirizzo o usando la
+  posizione attuale, poi i tragitti tra due luoghi con i giorni della settimana.
+- Il percorso in auto si calcola **una volta** con OpenRouteService e si salva in locale come
+  encoded polyline: le ricerche successive non usano la rete.
+- Si cercano i distributori entro una fascia attorno al percorso (predefinita 500 m) con la
+  distanza punto-segmento; i segmenti sono indicizzati in una griglia di circa 1 km.
+- Risparmio netto con la stessa formula dei distributori vicini: la media è quella della fascia
+  (la media nazionale se ci sono meno di 3 distributori) e la deviazione è andata e ritorno dal
+  percorso al distributore.
 
 ### Mappa
 

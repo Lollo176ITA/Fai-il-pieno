@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -35,6 +36,14 @@ import it.faiilpieno.data.prefs.PreferencesRepository
 import it.faiilpieno.ui.car.CarScreen
 import it.faiilpieno.ui.map.MapScreen
 import it.faiilpieno.ui.onboarding.OnboardingScreen
+import it.faiilpieno.ui.routes.CommuteDetailRoute
+import it.faiilpieno.ui.routes.CommuteDetailScreen
+import it.faiilpieno.ui.routes.CommuteEditRoute
+import it.faiilpieno.ui.routes.CommuteEditScreen
+import it.faiilpieno.ui.routes.PlaceEditRoute
+import it.faiilpieno.ui.routes.PlaceEditScreen
+import it.faiilpieno.ui.routes.RoutesRoute
+import it.faiilpieno.ui.routes.RoutesScreen
 import it.faiilpieno.ui.today.TodayScreen
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -49,10 +58,17 @@ import kotlin.reflect.KClass
 
 @Serializable data object CarRoute
 
-private enum class Tab(val route: Any, val routeClass: KClass<*>, @StringRes val label: Int, @DrawableRes val icon: Int) {
-    TODAY(TodayRoute, TodayRoute::class, R.string.tab_today, R.drawable.ic_gas_station),
-    MAP(MapRoute, MapRoute::class, R.string.tab_map, R.drawable.ic_map),
-    CAR(CarRoute, CarRoute::class, R.string.tab_car, R.drawable.ic_car),
+/** [routeClasses]: le destinazioni in cui la scheda risulta selezionata (anche quelle annidate). */
+private enum class Tab(val route: Any, val routeClasses: Set<KClass<*>>, @StringRes val label: Int, @DrawableRes val icon: Int) {
+    TODAY(TodayRoute, setOf(TodayRoute::class), R.string.tab_today, R.drawable.ic_gas_station),
+    MAP(MapRoute, setOf(MapRoute::class), R.string.tab_map, R.drawable.ic_map),
+    ROUTES(
+        RoutesRoute,
+        setOf(RoutesRoute::class, PlaceEditRoute::class, CommuteEditRoute::class, CommuteDetailRoute::class),
+        R.string.tab_routes,
+        R.drawable.ic_route,
+    ),
+    CAR(CarRoute, setOf(CarRoute::class), R.string.tab_car, R.drawable.ic_car),
 }
 
 @HiltViewModel
@@ -82,8 +98,45 @@ private fun MainScaffold() {
             startDestination = TodayRoute,
             modifier = Modifier.padding(padding).consumeWindowInsets(padding),
         ) {
-            composable<TodayRoute> { TodayScreen(onOpenCar = { navController.navigateToTab(Tab.CAR) }) }
+            composable<TodayRoute> {
+                TodayScreen(
+                    onOpenCar = { navController.navigateToTab(Tab.CAR) },
+                    onOpenCommute = { navController.navigate(CommuteDetailRoute(it)) },
+                )
+            }
             composable<MapRoute> { MapScreen() }
+            composable<RoutesRoute> {
+                RoutesScreen(
+                    onAddPlace = { kind -> navController.navigate(PlaceEditRoute(kind = kind?.name)) },
+                    onEditPlace = { navController.navigate(PlaceEditRoute(placeId = it)) },
+                    onAddCommute = { navController.navigate(CommuteEditRoute()) },
+                    onOpenCommute = { navController.navigate(CommuteDetailRoute(it)) },
+                )
+            }
+            composable<PlaceEditRoute> { PlaceEditScreen(onBack = navController::popBackStack) }
+            composable<CommuteEditRoute> {
+                CommuteEditScreen(
+                    onBack = navController::popBackStack,
+                    onSaved = { id, isNew ->
+                        // Un tragitto nuovo apre il suo dettaglio; una modifica torna al dettaglio da cui si era partiti.
+                        if (isNew) {
+                            navController.navigate(CommuteDetailRoute(id)) {
+                                popUpTo<CommuteEditRoute> { inclusive = true }
+                            }
+                        } else {
+                            navController.popBackStack()
+                        }
+                    },
+                    // Si elimina solo da un tragitto esistente, cioè partendo dal suo dettaglio.
+                    onDeleted = { navController.popBackStack<CommuteDetailRoute>(inclusive = true) },
+                )
+            }
+            composable<CommuteDetailRoute> {
+                CommuteDetailScreen(
+                    onBack = navController::popBackStack,
+                    onEdit = { navController.navigate(CommuteEditRoute(it)) },
+                )
+            }
             composable<CarRoute> { CarScreen() }
         }
     }
@@ -96,10 +149,13 @@ private fun BottomBar(navController: NavHostController) {
     ShortNavigationBar {
         Tab.entries.forEach { tab ->
             ShortNavigationBarItem(
-                selected = destination?.hasRoute(tab.routeClass) == true,
+                selected = tab.routeClasses.any { destination?.hasRoute(it) == true },
                 onClick = { navController.navigateToTab(tab) },
                 icon = { Icon(painterResource(tab.icon), contentDescription = null) },
-                label = { Text(stringResource(tab.label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                // Con quattro schede e il testo ingrandito "La mia auto" non sta su una riga: va a capo.
+                label = {
+                    Text(stringResource(tab.label), maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+                },
             )
         }
     }

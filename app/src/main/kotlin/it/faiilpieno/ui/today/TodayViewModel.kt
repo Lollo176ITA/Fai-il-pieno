@@ -7,10 +7,15 @@ import it.faiilpieno.data.location.LocationProvider
 import it.faiilpieno.data.location.LocationResult
 import it.faiilpieno.data.prefs.PreferencesRepository
 import it.faiilpieno.data.prefs.SearchPreferences
+import it.faiilpieno.data.repository.CommuteRepository
 import it.faiilpieno.data.repository.PriceRepository
 import it.faiilpieno.data.work.DataSync
 import it.faiilpieno.data.work.SyncStatus
 import it.faiilpieno.domain.brand.BrandGroup
+import it.faiilpieno.domain.commute.Commute
+import it.faiilpieno.domain.commute.CommuteResult
+import it.faiilpieno.domain.commute.CommuteSchedule
+import it.faiilpieno.domain.commute.RankedRouteOffer
 import it.faiilpieno.domain.model.CarProfile
 import it.faiilpieno.domain.model.DatasetInfo
 import it.faiilpieno.domain.model.FuelCategory
@@ -27,6 +32,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
@@ -51,6 +57,14 @@ sealed interface ResultsState {
     data class Ready(val result: NearbyResult, val radiusMeters: Double, val isRefreshing: Boolean = false) : ResultsState
 }
 
+/** Il distributore consigliato sul prossimo tragitto abituale (oggi o il primo giorno previsto). */
+data class CommuteAdvice(
+    val commute: Commute,
+    val date: LocalDate,
+    val result: CommuteResult,
+    val best: RankedRouteOffer,
+)
+
 data class TodayUiState(
     val dataset: DatasetInfo? = null,
     val sync: SyncStatus = SyncStatus.Idle,
@@ -58,6 +72,7 @@ data class TodayUiState(
     val car: CarProfile = CarProfile(),
     val search: SearchPreferences = SearchPreferences(),
     val results: ResultsState = ResultsState.Idle,
+    val commuteAdvice: CommuteAdvice? = null,
     val isDataStale: Boolean = false,
     val isOnline: Boolean = true,
 )
@@ -69,6 +84,7 @@ class TodayViewModel @Inject constructor(
     private val prefs: PreferencesRepository,
     private val locationProvider: LocationProvider,
     private val dataSync: DataSync,
+    private val commutes: CommuteRepository,
 ) : ViewModel() {
 
     private val location = MutableStateFlow<LocationState>(LocationState.Locating)
@@ -117,13 +133,33 @@ class TodayViewModel @Inject constructor(
         if (next is ResultsState.Loading && previous is ResultsState.Ready) previous.copy(isRefreshing = true) else next
     }
 
+    private data class AdviceKey(
+        val commutes: List<Commute>,
+        val car: CarProfile,
+        val bufferMeters: Int,
+        val search: SearchPreferences,
+        val hasData: Boolean,
+        val tick: Int,
+    )
+
+    /** Non dipende dalla posizione: il consiglio sul tragitto c'è anche senza GPS. */
+    private val commuteAdvice = combine(
+        commutes.commutes,
+        prefs.carProfile,
+        prefs.routeBufferMeters,
+        prefs.searchPreferences,
+        combine(prices.datasetInfo, reloadTick, ::Pair),
+    ) { list, car, buffer, search, (info, tick) -> AdviceKey(list, car, buffer, search, info != null, tick) }
+        .distinctUntilChanged()
+        .mapLatest(::adviseNextCommute)
+
     val uiState: StateFlow<TodayUiState> = combine(
         prices.datasetInfo,
         dataSync.status,
         location,
-        combine(prefs.carProfile, prefs.searchPreferences, ::Pair),
+        combine(prefs.carProfile, prefs.searchPreferences, commuteAdvice, ::Triple),
         results,
-    ) { info, sync, loc, (car, search), res ->
+    ) { info, sync, loc, (car, search, advice), res ->
         TodayUiState(
             dataset = info,
             sync = sync,
@@ -131,6 +167,7 @@ class TodayViewModel @Inject constructor(
             car = car,
             search = search,
             results = res,
+            commuteAdvice = advice,
             isDataStale = info != null && info.extractionDate.isBefore(LocalDate.now().minusDays(STALE_AFTER_DAYS)),
             isOnline = dataSync.isOnline(),
         )
@@ -181,6 +218,26 @@ class TodayViewModel @Inject constructor(
     fun setSortMode(mode: SortMode) = viewModelScope.launch { prefs.setSortMode(mode) }
 
     fun setBrands(brands: Set<BrandGroup>) = viewModelScope.launch { prefs.setBrands(brands) }
+
+    /**
+     * Tra i tragitti con il percorso calcolato prende quelli del primo giorno previsto (oggi, se
+     * c'è) e sceglie quello con il risparmio netto più alto. null se nessuno fa risparmiare.
+     */
+    private suspend fun adviseNextCommute(key: AdviceKey): CommuteAdvice? {
+        if (!key.hasData) return null
+        val today = LocalDate.now()
+        val scheduled = key.commutes
+            .filter { it.route != null }
+            .mapNotNull { commute -> CommuteSchedule.nextOccurrence(commute.days, today)?.let { commute to it } }
+        val firstDate = scheduled.minOfOrNull { it.second } ?: return null
+        return scheduled
+            .filter { it.second == firstDate }
+            .mapNotNull { (commute, date) ->
+                val result = commutes.advise(commute, key.car, key.bufferMeters.toDouble(), key.search.brands) ?: return@mapNotNull null
+                result.recommended?.let { CommuteAdvice(commute, date, result, it) }
+            }
+            .maxByOrNull { it.best.netSavingEur }
+    }
 
     /**
      * Il file MIMIT esce verso le 9 con i prezzi del giorno prima: prima delle 10 l'ultimo

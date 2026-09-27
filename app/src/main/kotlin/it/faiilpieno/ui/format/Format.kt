@@ -1,6 +1,7 @@
 package it.faiilpieno.ui.format
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import it.faiilpieno.R
 import it.faiilpieno.domain.brand.BrandGroup
@@ -96,3 +97,11 @@ fun fuelAndModeLabel(fuel: FuelCategory, mode: ServiceMode): String =
 
 @Composable
 fun brandGroupLabel(group: BrandGroup): String = group.canonical ?: stringResource(R.string.brand_altri)
+
+/** Differenza dalla media nazionale letta da TalkBack: "8 centesimi sotto la media nazionale". */
+@Composable
+fun deltaSpoken(delta: Int): String = when {
+    delta <= -1 -> pluralStringResource(R.plurals.delta_below_a11y, -delta, -delta)
+    delta >= 1 -> pluralStringResource(R.plurals.delta_above_a11y, delta, delta)
+    else -> stringResource(R.string.delta_equal_a11y)
+}

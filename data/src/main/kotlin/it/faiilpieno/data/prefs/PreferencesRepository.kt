@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import it.faiilpieno.domain.brand.BrandGroup
@@ -46,6 +47,9 @@ class PreferencesRepository @Inject constructor(private val store: DataStore<Pre
         )
     }.distinctUntilChanged()
 
+    /** Distanza massima dal percorso abituale entro cui cercare i distributori. */
+    val routeBufferMeters: Flow<Int> = store.data.map { it[ROUTE_BUFFER] ?: DEFAULT_ROUTE_BUFFER_M }.distinctUntilChanged()
+
     val onboardingDone: Flow<Boolean> = store.data.map { it[ONBOARDING_DONE] ?: false }.distinctUntilChanged()
 
     suspend fun saveCarProfile(profile: CarProfile) {
@@ -75,6 +79,10 @@ class PreferencesRepository @Inject constructor(private val store: DataStore<Pre
         store.edit { it[BRANDS] = brands.map(BrandGroup::name).toSet() }
     }
 
+    suspend fun setRouteBuffer(meters: Int) {
+        store.edit { it[ROUTE_BUFFER] = meters }
+    }
+
     suspend fun setOnboardingDone() {
         store.edit { it[ONBOARDING_DONE] = true }
     }
@@ -82,15 +90,19 @@ class PreferencesRepository @Inject constructor(private val store: DataStore<Pre
     private inline fun <reified E : Enum<E>> String?.toEnum(default: E): E =
         this?.let { name -> enumValues<E>().firstOrNull { it.name == name } } ?: default
 
-    private companion object {
-        val FUEL = stringPreferencesKey("car_fuel")
-        val TANK = doublePreferencesKey("car_tank")
-        val CONSUMPTION = doublePreferencesKey("car_consumption_per_100km")
-        val CONSUMPTION_UNIT = stringPreferencesKey("car_consumption_unit")
-        val SERVICE_MODE = stringPreferencesKey("service_mode")
-        val CAR_CONFIGURED = booleanPreferencesKey("car_configured")
-        val SORT_MODE = stringPreferencesKey("sort_mode")
-        val BRANDS = stringSetPreferencesKey("brand_filter")
-        val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
+    companion object {
+        const val DEFAULT_ROUTE_BUFFER_M = 500
+        val ROUTE_BUFFER_OPTIONS = listOf(250, 500, 1_000, 2_000)
+
+        private val FUEL = stringPreferencesKey("car_fuel")
+        private val TANK = doublePreferencesKey("car_tank")
+        private val CONSUMPTION = doublePreferencesKey("car_consumption_per_100km")
+        private val CONSUMPTION_UNIT = stringPreferencesKey("car_consumption_unit")
+        private val SERVICE_MODE = stringPreferencesKey("service_mode")
+        private val CAR_CONFIGURED = booleanPreferencesKey("car_configured")
+        private val SORT_MODE = stringPreferencesKey("sort_mode")
+        private val BRANDS = stringSetPreferencesKey("brand_filter")
+        private val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
+        private val ROUTE_BUFFER = intPreferencesKey("route_buffer_m")
     }
 }

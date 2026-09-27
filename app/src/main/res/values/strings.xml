@@ -5,6 +5,7 @@
     <!-- Navigazione -->
     <string name="tab_today">Oggi</string>
     <string name="tab_map">Mappa</string>
+    <string name="tab_routes">Percorsi</string>
     <string name="tab_car">La mia auto</string>
 
     <!-- Carburanti e modalità -->
@@ -145,6 +146,121 @@
     <string name="car_data_stats">%1$s distributori · %2$s prezzi</string>
     <string name="car_data_refresh">Aggiorna ora</string>
     <string name="car_data_license">I dati sono pubblicati dal Ministero delle Imprese e del Made in Italy con licenza IODL 2.0 e si riferiscono ai prezzi comunicati dai gestori alle 8 del mattino. I prezzi non aggiornati da più di 14 giorni e quelli più bassi del 20% rispetto alla mediana nazionale (quasi sempre errori) non vengono mostrati.</string>
+
+    <!-- Percorsi abituali -->
+    <string name="routes_title">Percorsi</string>
+    <string name="routes_commutes">Tragitti abituali</string>
+    <string name="routes_places">I tuoi luoghi</string>
+    <string name="routes_add_place">Aggiungi luogo</string>
+    <string name="routes_add_commute">Aggiungi tragitto</string>
+    <string name="routes_empty_title">Dove vai di solito?</string>
+    <string name="routes_empty_text">Salva casa e lavoro: ti diremo dove conviene fare il pieno lungo la strada, senza deviazioni inutili.</string>
+    <string name="routes_add_home">Aggiungi Casa</string>
+    <string name="routes_need_two_places">Aggiungi almeno due luoghi per creare un tragitto.</string>
+    <string name="routes_no_commutes">Nessun tragitto. Crea il primo per vedere i distributori lungo la strada.</string>
+    <string name="routes_no_key">Manca la chiave OpenRouteService in local.properties: percorsi e ricerca degli indirizzi non funzionano.</string>
+    <string name="action_back">Indietro</string>
+    <string name="action_cancel">Annulla</string>
+    <string name="action_delete">Elimina</string>
+    <string name="action_edit">Modifica</string>
+
+    <string name="kind_home">Casa</string>
+    <string name="kind_work">Lavoro</string>
+    <string name="kind_university">Università</string>
+    <string name="kind_other">Altro</string>
+
+    <string name="days_weekdays">Lun–Ven</string>
+    <string name="days_everyday">Tutti i giorni</string>
+    <string name="days_weekend">Sabato e domenica</string>
+    <string name="when_today">Oggi</string>
+    <string name="when_tomorrow">Domani</string>
+    <string name="format_duration_min">%1$d min</string>
+    <string name="format_duration_h">%1$d h %2$02d min</string>
+
+    <string name="commute_title">%1$s → %2$s</string>
+    <string name="commute_title_a11y">da %1$s a %2$s</string>
+    <string name="commute_round_trip">andata e ritorno</string>
+    <string name="commute_distance_duration">%1$s · %2$s</string>
+    <string name="commute_computing">Calcolo il percorso…</string>
+    <string name="commute_not_computed">Percorso non ancora calcolato.</string>
+    <string name="commute_error_network">Percorso non calcolato: sei offline.</string>
+    <string name="commute_error_key">Percorso non calcolato: manca la chiave OpenRouteService.</string>
+    <string name="commute_error_unauthorized">Il servizio dei percorsi ha rifiutato la richiesta: chiave non valida o quota giornaliera esaurita.</string>
+    <string name="commute_error_no_route">Non trovo una strada tra questi due luoghi. Controlla che siano giusti.</string>
+    <string name="commute_error_server">Il servizio dei percorsi non risponde. Riprova tra poco.</string>
+    <string name="commute_best">Conviene %1$s a %2$s: risparmi %3$s</string>
+    <string name="commute_no_best">Lungo la strada i prezzi sono allineati.</string>
+    <string name="commute_card_a11y">Tragitto %1$s, %2$s. %3$s</string>
+
+    <string name="place_new_title">Nuovo luogo</string>
+    <string name="place_edit_title">Modifica luogo</string>
+    <string name="place_kind">Che luogo è?</string>
+    <string name="place_name">Nome</string>
+    <string name="place_name_hint">Per esempio: Palestra, Casa dei nonni</string>
+    <string name="place_where">Dove si trova?</string>
+    <string name="place_search">Cerca un indirizzo</string>
+    <string name="place_search_hint">Via, numero civico e città</string>
+    <string name="place_use_location">Usa dove sono ora</string>
+    <string name="place_locating">Cerco la tua posizione…</string>
+    <string name="place_current_position">Posizione attuale</string>
+    <string name="place_selected_a11y">Posizione scelta: %1$s</string>
+    <string name="place_searching">Cerco…</string>
+    <string name="place_search_empty">Nessun indirizzo trovato. Prova ad aggiungere la città.</string>
+    <string name="place_search_offline">Nessuna connessione: puoi usare la posizione attuale.</string>
+    <string name="place_search_no_key">Ricerca degli indirizzi non disponibile (manca la chiave OpenRouteService). Puoi usare la posizione attuale.</string>
+    <string name="place_search_error">Ricerca non riuscita. Riprova tra poco.</string>
+    <string name="place_location_error">Non riesco a trovare la tua posizione. Attiva la localizzazione o cerca l\'indirizzo.</string>
+    <string name="place_permission_denied">Senza il permesso di posizione puoi comunque cercare l\'indirizzo.</string>
+    <string name="place_missing_name">Scrivi un nome</string>
+    <string name="place_missing_location">Scegli dove si trova</string>
+    <string name="place_save">Salva luogo</string>
+    <string name="place_delete">Elimina luogo</string>
+    <string name="place_delete_title">Eliminare %1$s?</string>
+    <string name="place_delete_unused">Non è usato da nessun tragitto.</string>
+    <plurals name="place_delete_text">
+        <item quantity="one">Verrà eliminato anche %1$d tragitto che lo usa.</item>
+        <item quantity="other">Verranno eliminati anche %1$d tragitti che lo usano.</item>
+    </plurals>
+
+    <string name="commute_new_title">Nuovo tragitto</string>
+    <string name="commute_edit_title">Modifica tragitto</string>
+    <string name="commute_from">Parti da</string>
+    <string name="commute_to">Arrivi a</string>
+    <string name="commute_days">In quali giorni?</string>
+    <string name="commute_round_trip_label">Fai anche il ritorno</string>
+    <string name="commute_round_trip_hint">Si assume che il ritorno segua la stessa strada.</string>
+    <string name="commute_same_place">Partenza e arrivo devono essere diversi.</string>
+    <string name="commute_no_days">Scegli almeno un giorno.</string>
+    <string name="commute_save">Salva e calcola il percorso</string>
+    <string name="commute_delete">Elimina tragitto</string>
+    <string name="commute_delete_title">Eliminare il tragitto %1$s?</string>
+    <string name="commute_delete_text">I luoghi restano salvati.</string>
+    <string name="commute_not_found">Questo tragitto non esiste più.</string>
+
+    <string name="commute_route_info">%1$s · %2$s · calcolato il %3$s</string>
+    <string name="commute_recompute">Ricalcola percorso</string>
+    <string name="commute_buffer">Distanza massima dal percorso</string>
+    <string name="commute_buffer_hint">Più è lontano il distributore, più strada in più fai per fermarti.</string>
+    <string name="commute_stations_title">Distributori lungo il percorso</string>
+    <plurals name="commute_stations_subtitle">
+        <item quantity="one">%1$d distributore entro %2$s · %3$s</item>
+        <item quantity="other">%1$d distributori entro %2$s · %3$s</item>
+    </plurals>
+    <string name="commute_sort_price">Prezzo</string>
+    <string name="commute_sort_along">Lungo la strada</string>
+    <string name="commute_offer_position">dopo %1$s da %2$s · %3$s dal percorso</string>
+    <string name="commute_reference_zone">rispetto alla media del percorso, su un pieno da %1$s %2$s, deviazione inclusa</string>
+    <string name="commute_reference_national">rispetto alla media nazionale (lungo il percorso ci sono pochi distributori), su un pieno da %1$s %2$s, deviazione inclusa</string>
+    <string name="commute_empty_title">Nessun distributore lungo il percorso</string>
+    <string name="commute_empty_text">Entro %1$s dal percorso non ci sono distributori con prezzi aggiornati di %2$s.</string>
+    <string name="commute_empty_brand_text">Entro %1$s dal percorso non ci sono distributori dei marchi scelti.</string>
+    <string name="commute_widen">Allarga a %1$s</string>
+    <string name="commute_brand_filter_on">Mostro solo i marchi scelti nella scheda Oggi.</string>
+    <string name="commute_station_row_a11y">%1$s, %2$s, %3$s, %4$s</string>
+
+    <string name="today_commute_label">%1$s sul tragitto %2$s</string>
+    <string name="today_commute_open">Vedi il percorso</string>
+    <string name="commute_advice_a11y">%1$s: %2$s, %3$s, prezzo %4$s, %5$s</string>
 
     <!-- Onboarding -->
     <string name="onboarding_skip">Salta</string>

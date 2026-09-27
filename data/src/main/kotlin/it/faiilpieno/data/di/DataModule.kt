@@ -12,7 +12,9 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import it.faiilpieno.data.db.AppDatabase
+import it.faiilpieno.data.db.CommuteDao
 import it.faiilpieno.data.db.StationDao
+import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import java.time.Duration
 import javax.inject.Singleton
@@ -30,6 +32,9 @@ object DataModule {
     fun stationDao(db: AppDatabase): StationDao = db.stationDao()
 
     @Provides
+    fun commuteDao(db: AppDatabase): CommuteDao = db.commuteDao()
+
+    @Provides
     @Singleton
     fun preferences(@ApplicationContext context: Context): DataStore<Preferences> =
         PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("settings") }
@@ -40,4 +45,8 @@ object DataModule {
         .connectTimeout(Duration.ofSeconds(20))
         .readTimeout(Duration.ofSeconds(60))
         .build()
+
+    @Provides
+    @Singleton
+    fun json(): Json = Json { ignoreUnknownKeys = true }
 }

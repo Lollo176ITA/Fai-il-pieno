@@ -7,8 +7,9 @@ telefono, senza backend. Dettagli tecnici e regole sui dati sono in [README.md](
 
 ## Stato
 
-- **Fase 1 (MVP): completata.** Vedi `git log`.
-- **Prossima: fase 2** (percorsi abituali). Specifica delle fasi mancanti qui sotto.
+- **Fase 1 (MVP): completata.**
+- **Fase 2 (percorsi abituali): completata.** Vedi `git log`.
+- **Prossima: fase 3** (stima carburante e notifiche). Specifica delle fasi mancanti qui sotto.
 
 ## Regole di lavoro (dall'utente)
 
@@ -31,7 +32,7 @@ kotlinx.serialization, MapLibre + OpenFreeMap. AGP 9 con Kotlin integrato (nient
 
 - `:domain` Kotlin/JVM puro: logica e calcoli, **ogni nuovo calcolo va qui, con i test**.
 - `:data` Room, DataStore, rete, worker, posizione.
-- `:app` UI Compose, ViewModel, navigazione (3 schede: Oggi, Mappa, La mia auto).
+- `:app` UI Compose, ViewModel, navigazione (4 schede: Oggi, Mappa, Percorsi, La mia auto).
 
 ## Decisioni già prese (non rimetterle in discussione senza motivo)
 
@@ -46,8 +47,20 @@ kotlinx.serialization, MapLibre + OpenFreeMap. AGP 9 con Kotlin integrato (nient
   localizzazione in background.
 - Distributore consigliato solo se il risparmio netto è positivo. Rifornimento tipico = 80% del
   serbatoio. Deviazione = km in più, andata e ritorno, rispetto al distributore più vicino.
-- Room è alla versione 1. **Da ora ogni modifica allo schema richiede di incrementare la versione e
-  aggiungere una migrazione** (`AutoMigration` dove basta).
+- Room è alla versione 2 (v2: `places` e `commutes`). **Ogni modifica allo schema richiede di
+  incrementare la versione e aggiungere una migrazione** (`AutoMigration` dove basta).
+- OpenRouteService: host **`api.heigit.org`** (`api.openrouteservice.org` è dismesso dal 24/8/2026).
+  Percorsi: `POST /openrouteservice/v2/directions/driving-car/json`; indirizzi: `GET /pelias/v1/search`
+  (non `autocomplete`, che sbaglia gli indirizzi completi). Chiave nell'header `Authorization`,
+  letta da `local.properties` in `BuildConfig.ORS_API_KEY` del modulo `:data`.
+- Tragitti: percorso calcolato una volta e salvato come encoded polyline; si ricalcola solo se
+  cambiano i luoghi o su richiesta. Il ritorno si assume sulla stessa strada.
+- Distributori sul tragitto: entro la fascia scelta (250 m / 500 m predefinito / 1 km / 2 km).
+  Deviazione = 2 × distanza in linea d'aria dal percorso. Media di zona = media della fascia;
+  con meno di 3 distributori si usa la media nazionale (e la UI lo dice). Il filtro marchi della
+  scheda Oggi vale anche qui, ma non cambia la media.
+- Card del tragitto in cima alla scheda Oggi (scelta dell'utente): solo per i tragitti del primo
+  giorno in cui sono previsti (oggi, se c'è) e solo se c'è un risparmio netto positivo.
 
 ## Comandi
 
@@ -69,21 +82,6 @@ adb -s emulator-5554 shell cmd location providers set-test-provider-location gps
 (ripetere per `fused` e `network`).
 
 ## Fasi da fare
-
-### Fase 2 — Percorsi abituali
-
-1. L'utente salva luoghi (Casa, Lavoro, Università, personalizzati) e i giorni della settimana in
-   cui fa il tragitto.
-2. Il percorso si calcola UNA volta con OpenRouteService (chiave `ORS_API_KEY` in
-   `local.properties`) e la polyline si salva in locale.
-3. Si cercano i distributori entro una distanza configurabile dalla polyline (default 500 m),
-   con la distanza punto-segmento.
-4. Convenienza della deviazione:
-   `risparmio netto = (prezzo_medio_zona − prezzo_distributore) × litri_da_fare − (km_deviazione × consumo × prezzo_distributore)`.
-   Si suggerisce un distributore solo se il risparmio netto è positivo.
-
-Tabelle previste: `places` (id, label, kind, lat, lon, address?) e `commutes` (id, fromPlaceId,
-toPlaceId, daysMask, roundTrip, distanceM, durationS, polyline encoded, computedAt).
 
 ### Fase 3 — Stima carburante e notifiche
 

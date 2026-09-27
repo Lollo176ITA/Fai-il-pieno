@@ -82,6 +82,7 @@ import it.faiilpieno.ui.components.PriceText
 import it.faiilpieno.ui.components.SourceAttribution
 import it.faiilpieno.ui.format.Fmt
 import it.faiilpieno.ui.format.brandGroupLabel
+import it.faiilpieno.ui.format.deltaSpoken
 import it.faiilpieno.ui.format.distanceText
 import it.faiilpieno.ui.format.eurosText
 import it.faiilpieno.ui.format.fuelAndModeLabel
@@ -90,6 +91,10 @@ import it.faiilpieno.ui.format.kmText
 import it.faiilpieno.ui.format.modeLabel
 import it.faiilpieno.ui.format.priceSpoken
 import it.faiilpieno.ui.format.quantityUnitLabel
+import it.faiilpieno.ui.routes.CommuteAdviceCard
+import it.faiilpieno.ui.routes.commuteTitle
+import it.faiilpieno.ui.routes.commuteTitleSpoken
+import it.faiilpieno.ui.routes.whenLabel
 import it.faiilpieno.ui.station.StationDetailSheet
 import it.faiilpieno.ui.station.openNavigation
 import it.faiilpieno.ui.theme.bold
@@ -103,7 +108,7 @@ private val locationPermissions = arrayOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TodayScreen(onOpenCar: () -> Unit, viewModel: TodayViewModel = hiltViewModel()) {
+fun TodayScreen(onOpenCar: () -> Unit, onOpenCommute: (Long) -> Unit, viewModel: TodayViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedStation by rememberSaveable { mutableStateOf<Long?>(null) }
     var showBrands by rememberSaveable { mutableStateOf(false) }
@@ -128,6 +133,11 @@ fun TodayScreen(onOpenCar: () -> Unit, viewModel: TodayViewModel = hiltViewModel
                 Header(state, viewModel, onShowBrands = { showBrands = true })
             }
             banners(state, viewModel, onOpenCar)
+            state.commuteAdvice?.let { advice ->
+                item(key = "commute") {
+                    CommuteCard(advice, onDetails = { selectedStation = it }, onOpenCommute = onOpenCommute)
+                }
+            }
             body(state, results, viewModel, onSelect = { selectedStation = it })
             item(key = "source") { SourceAttribution(state.dataset) }
         }
@@ -486,6 +496,25 @@ private fun HeroCard(result: NearbyResult, state: TodayUiState, onDetails: (Long
     }
 }
 
+/** Consiglio sul tragitto abituale: sta sopra al distributore vicino perché è il più utile. */
+@Composable
+private fun CommuteCard(advice: CommuteAdvice, onDetails: (Long) -> Unit, onOpenCommute: (Long) -> Unit) {
+    val day = whenLabel(advice.date)
+    CommuteAdviceCard(
+        label = stringResource(R.string.today_commute_label, day, commuteTitle(advice.commute)),
+        spokenLabel = stringResource(R.string.today_commute_label, day, commuteTitleSpoken(advice.commute)),
+        ranked = advice.best,
+        result = advice.result,
+        fromLabel = advice.commute.from.label,
+        onDetails = onDetails,
+        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        secondaryActionLabel = stringResource(R.string.today_commute_open),
+        onSecondaryAction = { onOpenCommute(advice.commute.id) },
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+    )
+}
+
 @Composable
 private fun ListHeader(count: Int, radiusMeters: Double, state: TodayUiState, onSort: (SortMode) -> Unit) {
     Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 8.dp)) {
@@ -522,7 +551,7 @@ private fun StationRow(ranked: RankedOffer, onClick: () -> Unit) {
     val price = ranked.offer.price
     val distance = distanceText(ranked.offer.distanceMeters)
     val priceLabel = priceSpoken(price.priceMilli, price.category)
-    val deltaText = ranked.nationalDeltaCents?.let { deltaA11y(it) } ?: ""
+    val deltaText = ranked.nationalDeltaCents?.let { deltaSpoken(it) } ?: ""
     val description = stringResource(R.string.station_row_a11y, station.brand, priceLabel, distance, deltaText)
 
     Row(
@@ -551,13 +580,6 @@ private fun StationRow(ranked: RankedOffer, onClick: () -> Unit) {
             ranked.nationalDeltaCents?.let { PriceDeltaBadge(it) }
         }
     }
-}
-
-@Composable
-private fun deltaA11y(delta: Int): String = when {
-    delta <= -1 -> pluralStringResource(R.plurals.delta_below_a11y, -delta, -delta)
-    delta >= 1 -> pluralStringResource(R.plurals.delta_above_a11y, delta, delta)
-    else -> stringResource(R.string.delta_equal_a11y)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
