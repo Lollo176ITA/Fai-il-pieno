@@ -7,10 +7,13 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-/** Chiave OpenRouteService/HeiGIT: solo in local.properties, mai nel repository. */
+/**
+ * Chiave OpenRouteService/HeiGIT: in locale da local.properties, in CI dalla variabile d'ambiente
+ * ORS_API_KEY (un secret). Mai nel repository.
+ */
 val orsApiKey: String = rootProject.file("local.properties").takeIf { it.exists() }
     ?.let { file -> Properties().apply { file.inputStream().use { load(it) } }.getProperty("ORS_API_KEY") }
-    .orEmpty()
+    ?: System.getenv("ORS_API_KEY").orEmpty()
 
 android {
     namespace = "it.faiilpieno.data"

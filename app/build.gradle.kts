@@ -6,6 +6,9 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+/** Firma della release: il keystore e le password arrivano solo da variabili d'ambiente (secrets della CI). */
+val releaseKeystore: String? = System.getenv("RELEASE_KEYSTORE_PATH")
+
 android {
     namespace = "it.faiilpieno"
     compileSdk = 37
@@ -14,8 +17,20 @@ android {
         applicationId = "it.faiilpieno"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        // In CI: numero dell'esecuzione e nome del tag, così ogni APK pubblicato aggiorna il precedente.
+        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 2
+        versionName = System.getenv("VERSION_NAME") ?: "0.2.0"
+    }
+
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -23,6 +38,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 

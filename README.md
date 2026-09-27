@@ -108,6 +108,43 @@ risparmio = (prezzo_medio_zona − prezzo) × litri − km_deviazione × consumo
 Tile di [OpenFreeMap](https://openfreemap.org/) (gratuite, senza chiave), dati
 © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors.
 
+## Pubblicazione (GitHub Actions)
+
+Il workflow [.github/workflows/build.yml](.github/workflows/build.yml) gira a ogni push su `main`
+e a ogni pull request: esegue test e lint e allega l'APK come artifact dell'esecuzione.
+Con un tag `v*` crea anche una **GitHub Release** con l'APK:
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+Secrets da configurare in *Settings → Secrets and variables → Actions*:
+
+| Secret | Contenuto |
+|---|---|
+| `ORS_API_KEY` | la chiave OpenRouteService |
+| `RELEASE_KEYSTORE_BASE64` | il keystore di firma, in base64 |
+| `RELEASE_KEYSTORE_PASSWORD` | password del keystore |
+| `RELEASE_KEY_ALIAS` | alias della chiave |
+| `RELEASE_KEY_PASSWORD` | password della chiave |
+
+Il keystore si crea una volta sola e va conservato fuori dal repository (se si perde, gli utenti
+non potranno più aggiornare l'app senza disinstallarla):
+
+```bash
+keytool -genkeypair -v -keystore faiilpieno-release.jks -alias faiilpieno \
+  -keyalg RSA -keysize 4096 -validity 10000
+base64 -w0 faiilpieno-release.jks   # da incollare in RELEASE_KEYSTORE_BASE64
+```
+
+Senza keystore il workflow pubblica l'APK di debug. `versionCode` è il numero dell'esecuzione
+del workflow e `versionName` il nome del tag senza la `v`.
+
+**Nota:** la chiave ORS finisce dentro l'APK e chi scarica l'APK può estrarla. Non essendoci un
+backend non c'è modo di evitarlo: se la release è pubblica conviene tenere d'occhio la quota
+sul pannello HeiGIT e, in caso di abusi, rigenerare la chiave.
+
 ## Licenza del codice
 
 Da definire.
