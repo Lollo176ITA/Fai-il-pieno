@@ -28,6 +28,7 @@
     <string name="format_euro">%1$s €</string>
     <string name="format_meters">%1$d m</string>
     <string name="format_km">%1$s km</string>
+    <string name="format_value_unit">%1$s %2$s</string>
     <string name="delta_below" tools:ignore="PluralsCandidate">−%1$d cent</string>
     <string name="delta_above" tools:ignore="PluralsCandidate">+%1$d cent</string>
     <string name="delta_equal">in media</string>
@@ -261,6 +262,64 @@
     <string name="today_commute_label">%1$s sul tragitto %2$s</string>
     <string name="today_commute_open">Vedi il percorso</string>
     <string name="commute_advice_a11y">%1$s: %2$s, %3$s, prezzo %4$s, %5$s</string>
+
+    <!-- Serbatoio e rifornimenti -->
+    <string name="tank_title">Serbatoio</string>
+    <string name="tank_no_estimate">Registra il prossimo pieno: da lì stimiamo quanto carburante ti resta.</string>
+    <string name="tank_level">Circa %1$s %2$s nel serbatoio</string>
+    <string name="tank_range">%1$s prima della riserva</string>
+    <string name="tank_in_reserve">Sei in riserva: è ora di fare il pieno.</string>
+    <string name="tank_reserve_today">In riserva oggi</string>
+    <string name="tank_reserve_tomorrow">In riserva domani</string>
+    <string name="tank_reserve_on">In riserva %1$s</string>
+    <string name="tank_reserve_on_date">In riserva il %1$s</string>
+    <string name="tank_reserve_unknown">Senza tragitti abituali non posso prevedere quando andrai in riserva.</string>
+    <string name="tank_last_full">Ultimo pieno: %1$s · stima basata sui tuoi tragitti</string>
+    <string name="tank_a11y" tools:ignore="PluralsCandidate">Serbatoio stimato al %1$d per cento</string>
+    <string name="refuel_action">Ho fatto il pieno</string>
+    <string name="refuel_here">Ho fatto il pieno qui</string>
+    <string name="refuel_undo">Annulla l\'ultimo rifornimento</string>
+    <string name="refuel_undo_title">Annullare l\'ultimo rifornimento?</string>
+    <string name="refuel_undo_text">La stima torna a quella di prima. Il consumo già ricalcolato non cambia: puoi correggerlo qui sotto.</string>
+    <string name="alerts_switch">Avvisami prima della riserva</string>
+    <string name="alerts_switch_hint">Una notifica la sera, quando mancano 2 giorni o meno. Non usa la posizione.</string>
+    <string name="alerts_denied">Le notifiche sono bloccate: puoi attivarle dalle impostazioni dell\'app.</string>
+
+    <string name="refuel_title">Ho fatto il pieno</string>
+    <string name="refuel_title_at">Rifornimento da %1$s</string>
+    <string name="refuel_kind_full">Pieno</string>
+    <string name="refuel_kind_partial">Parziale</string>
+    <string name="refuel_when">Quando?</string>
+    <string name="refuel_when_today">Oggi</string>
+    <string name="refuel_when_yesterday">Ieri</string>
+    <string name="refuel_quantity">Quantità (facoltativa)</string>
+    <string name="refuel_amount">Importo (facoltativo)</string>
+    <string name="refuel_quantity_hint">Con la quantità calcoliamo il tuo consumo reale.</string>
+    <string name="refuel_partial_hint">Per un parziale serve la quantità o l\'importo.</string>
+    <string name="refuel_invalid">Inserisci un numero valido</string>
+    <string name="refuel_save">Salva</string>
+    <string name="refuel_saved">Rifornimento registrato</string>
+    <string name="refuel_calibrated">Consumo aggiornato: %1$s (prima %2$s)</string>
+    <string name="refuel_range_now">Ora hai circa %1$s prima della riserva.</string>
+    <string name="refuel_quantity_estimated">Circa %1$s %2$s, ricavati dall\'importo.</string>
+    <string name="action_close">Chiudi</string>
+    <string name="alerts_ask_title">Vuoi un avviso prima della riserva?</string>
+    <string name="alerts_ask_text">Ti avvisiamo la sera, quando mancano 2 giorni, e ti diciamo dove conviene fermarti lungo i tuoi tragitti.</string>
+    <string name="alerts_ask_yes">Attiva</string>
+    <string name="alerts_ask_no">No grazie</string>
+
+    <string name="today_reserve_tomorrow">Domani sei in riserva.</string>
+    <plurals name="today_reserve_days">
+        <item quantity="one">Tra %1$d giorno sei in riserva.</item>
+        <item quantity="other">Tra %1$d giorni sei in riserva.</item>
+    </plurals>
+
+    <!-- Notifiche -->
+    <string name="notif_channel">Avvisi carburante</string>
+    <string name="notif_channel_desc">Ti avvisa quando stai per andare in riserva.</string>
+    <string name="notif_title">Carburante in esaurimento</string>
+    <string name="notif_stop">%1$s passi davanti a %2$s a %3$s: risparmi %4$s.</string>
+    <string name="notif_no_stop">Apri Fai il pieno per trovare il distributore più conveniente.</string>
 
     <!-- Onboarding -->
     <string name="onboarding_skip">Salta</string>

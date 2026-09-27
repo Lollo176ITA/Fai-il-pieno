@@ -8,8 +8,10 @@ telefono, senza backend. Dettagli tecnici e regole sui dati sono in [README.md](
 ## Stato
 
 - **Fase 1 (MVP): completata.**
-- **Fase 2 (percorsi abituali): completata.** Vedi `git log`.
-- **Prossima: fase 3** (stima carburante e notifiche). Specifica delle fasi mancanti qui sotto.
+- **Fase 2 (percorsi abituali): completata.**
+- **Fase 3 (stima carburante e notifiche): completata.** Vedi `git log`.
+- **Prossima: fase 4** (eventi e prezzo stimato). Specifica qui sotto.
+- CI: `.github/workflows/build.yml` (test, lint, APK come artifact; Release con i tag `v*`).
 
 ## Regole di lavoro (dall'utente)
 
@@ -47,7 +49,8 @@ kotlinx.serialization, MapLibre + OpenFreeMap. AGP 9 con Kotlin integrato (nient
   localizzazione in background.
 - Distributore consigliato solo se il risparmio netto è positivo. Rifornimento tipico = 80% del
   serbatoio. Deviazione = km in più, andata e ritorno, rispetto al distributore più vicino.
-- Room è alla versione 2 (v2: `places` e `commutes`). **Ogni modifica allo schema richiede di
+- Room è alla versione 3 (v2: `places` e `commutes`; v3: `refuels`, senza chiave esterna verso
+  `stations`, che l'import MIMIT svuota ogni giorno). **Ogni modifica allo schema richiede di
   incrementare la versione e aggiungere una migrazione** (`AutoMigration` dove basta).
 - OpenRouteService: host **`api.heigit.org`** (`api.openrouteservice.org` è dismesso dal 24/8/2026).
   Percorsi: `POST /openrouteservice/v2/directions/driving-car/json`; indirizzi: `GET /pelias/v1/search`
@@ -61,6 +64,17 @@ kotlinx.serialization, MapLibre + OpenFreeMap. AGP 9 con Kotlin integrato (nient
   scheda Oggi vale anche qui, ma non cambia la media.
 - Card del tragitto in cima alla scheda Oggi (scelta dell'utente): solo per i tragitti del primo
   giorno in cui sono previsti (oggi, se c'è) e solo se c'è un risparmio netto positivo.
+- Stima del serbatoio (`TankEstimator`): dall'ultimo pieno si scalano i km dei tragitti previsti
+  in ciascun giorno; il giorno del pieno conta, oggi no. Parziali senza litri ignorati. Riserva =
+  1/8 del serbatoio. Solo tragitti salvati: nessuna posizione in background.
+- Calibrazione da pieno a pieno (litri ÷ km stimati), accettata tra ½ e 2× il consumo attuale e con
+  almeno 50 km; aggiorna subito il profilo e lo dice (scelta dell'utente). Assorbe anche i km
+  guidati fuori dai tragitti.
+- UI della fase 3 (scelte dell'utente): card Serbatoio in cima a La mia auto con "Ho fatto il
+  pieno"; avviso in Oggi quando la riserva è entro 3 giorni; "Ho fatto il pieno qui" nel dettaglio
+  del distributore. Permesso notifiche chiesto dopo il primo pieno registrato, poi interruttore.
+- Notifica: `ReserveCheckWorker` ogni giorno alle 18:30, se la riserva è entro 2 giorni (stima di
+  domani mattina), al massimo una al giorno, con il distributore consigliato sul primo tragitto.
 
 ## Comandi
 
@@ -82,18 +96,6 @@ adb -s emulator-5554 shell cmd location providers set-test-provider-location gps
 (ripetere per `fused` e `network`).
 
 ## Fasi da fare
-
-### Fase 3 — Stima carburante e notifiche
-
-1. Pulsante "Ho fatto il pieno", con litri e importo opzionali.
-2. Stima dei km rimanenti: ogni giorno si scalano i km del tragitto abituale, nei giorni impostati.
-3. Calibrazione: al pieno successivo, se l'utente inserisce i litri, si ricalcola il consumo reale
-   e si aggiorna il profilo.
-4. Notifica del tipo: "Tra 2 giorni sei in riserva. Domani passi davanti a [distributore] a
-   2,17 €/l, risparmi 4 €."
-5. Niente localizzazione in background: solo percorsi salvati e posizione in primo piano.
-
-Tabella prevista: `refuels` (id, at, liters?, amountCents?, isFull, stationId?).
 
 ### Fase 4 — Eventi e prezzo stimato
 

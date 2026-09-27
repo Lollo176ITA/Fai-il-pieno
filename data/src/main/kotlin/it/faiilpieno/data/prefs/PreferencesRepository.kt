@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import it.faiilpieno.domain.brand.BrandGroup
@@ -17,6 +18,7 @@ import it.faiilpieno.domain.nearby.SortMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -49,6 +51,12 @@ class PreferencesRepository @Inject constructor(private val store: DataStore<Pre
 
     /** Distanza massima dal percorso abituale entro cui cercare i distributori. */
     val routeBufferMeters: Flow<Int> = store.data.map { it[ROUTE_BUFFER] ?: DEFAULT_ROUTE_BUFFER_M }.distinctUntilChanged()
+
+    /** Avvisi prima della riserva: null finché l'utente non ha scelto. */
+    val reserveAlerts: Flow<Boolean?> = store.data.map { it[RESERVE_ALERTS] }.distinctUntilChanged()
+
+    /** Giorno dell'ultimo avviso di riserva: al massimo uno al giorno. */
+    val lastReserveAlert: Flow<LocalDate?> = store.data.map { p -> p[LAST_RESERVE_ALERT]?.let(LocalDate::ofEpochDay) }.distinctUntilChanged()
 
     val onboardingDone: Flow<Boolean> = store.data.map { it[ONBOARDING_DONE] ?: false }.distinctUntilChanged()
 
@@ -83,6 +91,19 @@ class PreferencesRepository @Inject constructor(private val store: DataStore<Pre
         store.edit { it[ROUTE_BUFFER] = meters }
     }
 
+    /** Aggiorna solo il consumo, per la calibrazione dai rifornimenti. */
+    suspend fun setConsumption(per100Km: Double) {
+        store.edit { it[CONSUMPTION] = per100Km }
+    }
+
+    suspend fun setReserveAlerts(enabled: Boolean) {
+        store.edit { it[RESERVE_ALERTS] = enabled }
+    }
+
+    suspend fun setLastReserveAlert(date: LocalDate) {
+        store.edit { it[LAST_RESERVE_ALERT] = date.toEpochDay() }
+    }
+
     suspend fun setOnboardingDone() {
         store.edit { it[ONBOARDING_DONE] = true }
     }
@@ -104,5 +125,7 @@ class PreferencesRepository @Inject constructor(private val store: DataStore<Pre
         private val BRANDS = stringSetPreferencesKey("brand_filter")
         private val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         private val ROUTE_BUFFER = intPreferencesKey("route_buffer_m")
+        private val RESERVE_ALERTS = booleanPreferencesKey("reserve_alerts")
+        private val LAST_RESERVE_ALERT = longPreferencesKey("last_reserve_alert_day")
     }
 }

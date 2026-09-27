@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.faiilpieno.data.prefs.PreferencesRepository
 import it.faiilpieno.data.repository.PriceRepository
+import it.faiilpieno.data.repository.TankRepository
 import it.faiilpieno.data.work.DataSync
 import it.faiilpieno.data.work.SyncStatus
 import it.faiilpieno.domain.model.CarProfile
@@ -12,6 +13,7 @@ import it.faiilpieno.domain.model.ConsumptionUnit
 import it.faiilpieno.domain.model.DatasetInfo
 import it.faiilpieno.domain.model.FuelCategory
 import it.faiilpieno.domain.model.ServiceMode
+import it.faiilpieno.domain.tank.TankEstimate
 import it.faiilpieno.ui.format.Fmt
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +39,14 @@ data class CarForm(
     val loaded: Boolean = false,
 )
 
+data class TankState(
+    val loaded: Boolean = false,
+    val estimate: TankEstimate? = null,
+    val hasRefuels: Boolean = false,
+    /** null finché l'utente non ha scelto. */
+    val alerts: Boolean? = null,
+)
+
 data class DataInfoState(val dataset: DatasetInfo? = null, val sync: SyncStatus = SyncStatus.Idle)
 
 @HiltViewModel
@@ -44,6 +54,7 @@ class CarViewModel @Inject constructor(
     private val prefs: PreferencesRepository,
     prices: PriceRepository,
     private val dataSync: DataSync,
+    private val tankRepository: TankRepository,
 ) : ViewModel() {
 
     private val _form = MutableStateFlow(CarForm())
@@ -54,6 +65,10 @@ class CarViewModel @Inject constructor(
 
     val dataInfo: StateFlow<DataInfoState> = combine(prices.datasetInfo, dataSync.status, ::DataInfoState)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DataInfoState())
+
+    val tank: StateFlow<TankState> = combine(tankRepository.estimate, tankRepository.refuels, prefs.reserveAlerts) { estimate, refuels, alerts ->
+        TankState(loaded = true, estimate = estimate, hasRefuels = refuels.isNotEmpty(), alerts = alerts)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TankState())
 
     init {
         viewModelScope.launch {
@@ -66,8 +81,23 @@ class CarViewModel @Inject constructor(
                 serviceMode = profile.serviceMode,
                 loaded = true,
             )
+            // La calibrazione dai rifornimenti cambia il consumo: il campo si aggiorna, altrimenti
+            // "Salva" riscriverebbe il valore vecchio.
+            var lastConsumption = profile.consumptionPer100Km
+            prefs.carProfile.collect { updated ->
+                if (updated.consumptionPer100Km != lastConsumption) {
+                    lastConsumption = updated.consumptionPer100Km
+                    _form.update { form ->
+                        form.copy(consumption = Fmt.editable(toDisplay(updated.consumptionPer100Km, form.unit)), consumptionError = false)
+                    }
+                }
+            }
         }
     }
+
+    fun setAlerts(enabled: Boolean) = viewModelScope.launch { prefs.setReserveAlerts(enabled) }
+
+    fun undoLastRefuel() = viewModelScope.launch { tankRepository.deleteLast() }
 
     fun setFuel(fuel: FuelCategory) = _form.update { it.copy(fuel = fuel) }
 

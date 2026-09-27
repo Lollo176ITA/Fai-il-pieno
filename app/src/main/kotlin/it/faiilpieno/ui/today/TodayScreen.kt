@@ -91,6 +91,8 @@ import it.faiilpieno.ui.format.kmText
 import it.faiilpieno.ui.format.modeLabel
 import it.faiilpieno.ui.format.priceSpoken
 import it.faiilpieno.ui.format.quantityUnitLabel
+import it.faiilpieno.domain.tank.ReserveAlert
+import it.faiilpieno.ui.refuel.RefuelSheet
 import it.faiilpieno.ui.routes.CommuteAdviceCard
 import it.faiilpieno.ui.routes.commuteTitle
 import it.faiilpieno.ui.routes.commuteTitleSpoken
@@ -99,6 +101,7 @@ import it.faiilpieno.ui.station.StationDetailSheet
 import it.faiilpieno.ui.station.openNavigation
 import it.faiilpieno.ui.theme.bold
 import it.faiilpieno.ui.theme.tabular
+import java.time.LocalDate
 import kotlin.math.roundToInt
 
 private val locationPermissions = arrayOf(
@@ -112,6 +115,7 @@ fun TodayScreen(onOpenCar: () -> Unit, onOpenCommute: (Long) -> Unit, viewModel:
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedStation by rememberSaveable { mutableStateOf<Long?>(null) }
     var showBrands by rememberSaveable { mutableStateOf(false) }
+    var showRefuel by rememberSaveable { mutableStateOf(false) }
 
     val results = state.results
 
@@ -132,7 +136,7 @@ fun TodayScreen(onOpenCar: () -> Unit, onOpenCommute: (Long) -> Unit, viewModel:
             item(key = "header") {
                 Header(state, viewModel, onShowBrands = { showBrands = true })
             }
-            banners(state, viewModel, onOpenCar)
+            banners(state, viewModel, onOpenCar, onRefuel = { showRefuel = true })
             state.commuteAdvice?.let { advice ->
                 item(key = "commute") {
                     CommuteCard(advice, onDetails = { selectedStation = it }, onOpenCommute = onOpenCommute)
@@ -144,6 +148,7 @@ fun TodayScreen(onOpenCar: () -> Unit, onOpenCommute: (Long) -> Unit, viewModel:
     }
 
     selectedStation?.let { id -> StationDetailSheet(id, onDismiss = { selectedStation = null }) }
+    if (showRefuel) RefuelSheet(stationId = null, onDismiss = { showRefuel = false })
     if (showBrands) {
         BrandFilterSheet(
             selected = state.search.brands,
@@ -232,6 +237,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.banners(
     state: TodayUiState,
     viewModel: TodayViewModel,
     onOpenCar: () -> Unit,
+    onRefuel: () -> Unit,
 ) {
     val info = state.dataset ?: return
     val date = Fmt.dayMonth(info.extractionDate)
@@ -249,6 +255,22 @@ private fun androidx.compose.foundation.lazy.LazyListScope.banners(
                 Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 actionLabel = stringResource(R.string.action_retry),
                 onAction = viewModel::retryDownload,
+            )
+        }
+    }
+    state.tank?.takeIf { ReserveAlert.shouldAlert(it, LocalDate.now(), ReserveAlert.BANNER_DAYS) }?.let { tank ->
+        item(key = "reserve") {
+            val days = tank.daysToReserve(LocalDate.now()) ?: 0
+            InfoBanner(
+                R.drawable.ic_warning,
+                when {
+                    days <= 0 -> stringResource(R.string.tank_in_reserve)
+                    days == 1L -> stringResource(R.string.today_reserve_tomorrow)
+                    else -> pluralStringResource(R.plurals.today_reserve_days, days.toInt(), days.toInt())
+                },
+                Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                actionLabel = stringResource(R.string.refuel_action),
+                onAction = onRefuel,
             )
         }
     }

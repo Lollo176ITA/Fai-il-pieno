@@ -55,6 +55,7 @@ import it.faiilpieno.ui.format.quantityUnitLabel
 fun CarScreen(viewModel: CarViewModel = hiltViewModel()) {
     val form by viewModel.form.collectAsStateWithLifecycle()
     val dataInfo by viewModel.dataInfo.collectAsStateWithLifecycle()
+    val tank by viewModel.tank.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val savedMessage = stringResource(R.string.car_saved)
     LaunchedEffect(Unit) { viewModel.saved.collect { snackbar.showSnackbar(savedMessage) } }
@@ -73,6 +74,7 @@ fun CarScreen(viewModel: CarViewModel = hiltViewModel()) {
                 style = MaterialTheme.typography.displaySmall,
                 modifier = Modifier.semantics { heading() },
             )
+            if (tank.loaded) TankCard(tank, form.fuel, onAlertsChange = { viewModel.setAlerts(it) }, onUndo = { viewModel.undoLastRefuel() })
             if (form.loaded) CarForm(form, viewModel)
             DataSection(dataInfo, onRefresh = viewModel::refreshData)
         }

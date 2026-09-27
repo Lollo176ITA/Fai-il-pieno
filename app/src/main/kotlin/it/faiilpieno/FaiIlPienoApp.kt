@@ -5,6 +5,7 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
 import it.faiilpieno.data.work.DataSync
+import it.faiilpieno.notify.ReserveCheckWorker
 import org.maplibre.android.MapLibre
 import javax.inject.Inject
 
@@ -22,5 +23,6 @@ class FaiIlPienoApp : Application(), Configuration.Provider {
         super.onCreate()
         MapLibre.getInstance(this)
         dataSync.scheduleDaily()
+        ReserveCheckWorker.schedule(this)
     }
 }

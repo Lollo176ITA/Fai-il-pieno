@@ -122,6 +122,15 @@ class PriceRepository @Inject constructor(
         )
     }
 
+    /**
+     * Prezzo del carburante [category] al distributore [stationId] nella modalità preferita (o
+     * nell'altra, se manca). Serve a ricavare i litri da un importo.
+     */
+    suspend fun priceAt(stationId: Long, category: FuelCategory, mode: ServiceMode): Int? {
+        val candidates = dao.pricesOf(stationId).filter { it.fuelCategory == category && it.isBase }
+        return (candidates.firstOrNull { it.isSelf == mode.isSelf } ?: candidates.firstOrNull())?.priceMilli
+    }
+
     private suspend fun offersWithin(
         center: GeoPoint,
         radius: Double,

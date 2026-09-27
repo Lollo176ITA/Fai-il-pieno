@@ -20,10 +20,14 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -41,16 +45,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import it.faiilpieno.R
-import it.faiilpieno.ui.components.rememberFullSheetState
 import it.faiilpieno.data.repository.PriceRepository
 import it.faiilpieno.data.repository.StationDetail
 import it.faiilpieno.domain.model.FuelPrice
 import it.faiilpieno.domain.model.Station
 import it.faiilpieno.domain.model.StationType
 import it.faiilpieno.ui.components.PriceText
+import it.faiilpieno.ui.components.rememberFullSheetState
 import it.faiilpieno.ui.format.Fmt
 import it.faiilpieno.ui.format.fuelLabel
 import it.faiilpieno.ui.format.priceSpoken
+import it.faiilpieno.ui.refuel.RefuelSheet
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -72,6 +77,12 @@ class StationDetailViewModel @Inject constructor(private val prices: PriceReposi
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StationDetailSheet(stationId: Long, onDismiss: () -> Unit) {
+    // "Ho fatto il pieno qui" sostituisce il dettaglio con il foglio del rifornimento.
+    var refueling by rememberSaveable(stationId) { mutableStateOf(false) }
+    if (refueling) {
+        RefuelSheet(stationId = stationId, onDismiss = onDismiss)
+        return
+    }
     val viewModel: StationDetailViewModel = hiltViewModel()
     LaunchedEffect(stationId) { viewModel.load(stationId) }
     val detail by viewModel.detail.collectAsStateWithLifecycle()
@@ -96,6 +107,10 @@ fun StationDetailSheet(stationId: Long, onDismiss: () -> Unit) {
             ) {
                 Icon(painterResource(R.drawable.ic_directions), contentDescription = null, modifier = Modifier.size(20.dp))
                 Text(stringResource(R.string.action_navigate), modifier = Modifier.padding(start = 8.dp))
+            }
+            OutlinedButton(onClick = { refueling = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Icon(painterResource(R.drawable.ic_gas_station), contentDescription = null, modifier = Modifier.size(20.dp))
+                Text(stringResource(R.string.refuel_here), modifier = Modifier.padding(start = 8.dp))
             }
             PriceTable(d)
         }

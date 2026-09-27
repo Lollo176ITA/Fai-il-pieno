@@ -8,6 +8,7 @@ import it.faiilpieno.data.location.LocationResult
 import it.faiilpieno.data.prefs.PreferencesRepository
 import it.faiilpieno.data.prefs.SearchPreferences
 import it.faiilpieno.data.repository.CommuteRepository
+import it.faiilpieno.data.repository.TankRepository
 import it.faiilpieno.data.repository.PriceRepository
 import it.faiilpieno.data.work.DataSync
 import it.faiilpieno.data.work.SyncStatus
@@ -25,6 +26,7 @@ import it.faiilpieno.domain.nearby.NearbyRanker
 import it.faiilpieno.domain.nearby.NearbyResult
 import it.faiilpieno.domain.nearby.Offer
 import it.faiilpieno.domain.nearby.SortMode
+import it.faiilpieno.domain.tank.TankEstimate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -73,6 +75,8 @@ data class TodayUiState(
     val search: SearchPreferences = SearchPreferences(),
     val results: ResultsState = ResultsState.Idle,
     val commuteAdvice: CommuteAdvice? = null,
+    /** Carburante stimato: serve per l'avviso di riserva. */
+    val tank: TankEstimate? = null,
     val isDataStale: Boolean = false,
     val isOnline: Boolean = true,
 )
@@ -85,6 +89,7 @@ class TodayViewModel @Inject constructor(
     private val locationProvider: LocationProvider,
     private val dataSync: DataSync,
     private val commutes: CommuteRepository,
+    tankRepository: TankRepository,
 ) : ViewModel() {
 
     private val location = MutableStateFlow<LocationState>(LocationState.Locating)
@@ -133,6 +138,13 @@ class TodayViewModel @Inject constructor(
         if (next is ResultsState.Loading && previous is ResultsState.Ready) previous.copy(isRefreshing = true) else next
     }
 
+    private data class Extras(
+        val car: CarProfile,
+        val search: SearchPreferences,
+        val advice: CommuteAdvice?,
+        val tank: TankEstimate?,
+    )
+
     private data class AdviceKey(
         val commutes: List<Commute>,
         val car: CarProfile,
@@ -157,9 +169,9 @@ class TodayViewModel @Inject constructor(
         prices.datasetInfo,
         dataSync.status,
         location,
-        combine(prefs.carProfile, prefs.searchPreferences, commuteAdvice, ::Triple),
+        combine(prefs.carProfile, prefs.searchPreferences, commuteAdvice, tankRepository.estimate, ::Extras),
         results,
-    ) { info, sync, loc, (car, search, advice), res ->
+    ) { info, sync, loc, (car, search, advice, tank), res ->
         TodayUiState(
             dataset = info,
             sync = sync,
@@ -168,6 +180,7 @@ class TodayViewModel @Inject constructor(
             search = search,
             results = res,
             commuteAdvice = advice,
+            tank = tank,
             isDataStale = info != null && info.extractionDate.isBefore(LocalDate.now().minusDays(STALE_AFTER_DAYS)),
             isOnline = dataSync.isOnline(),
         )

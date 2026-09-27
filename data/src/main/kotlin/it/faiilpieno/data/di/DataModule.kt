@@ -13,6 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import it.faiilpieno.data.db.AppDatabase
 import it.faiilpieno.data.db.CommuteDao
+import it.faiilpieno.data.db.RefuelDao
 import it.faiilpieno.data.db.StationDao
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
@@ -33,6 +34,9 @@ object DataModule {
 
     @Provides
     fun commuteDao(db: AppDatabase): CommuteDao = db.commuteDao()
+
+    @Provides
+    fun refuelDao(db: AppDatabase): RefuelDao = db.refuelDao()
 
     @Provides
     @Singleton

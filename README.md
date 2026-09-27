@@ -103,6 +103,17 @@ risparmio = (prezzo_medio_zona − prezzo) × litri − km_deviazione × consumo
   (la media nazionale se ci sono meno di 3 distributori) e la deviazione è andata e ritorno dal
   percorso al distributore.
 
+### Serbatoio e avvisi
+
+- "Ho fatto il pieno" registra il rifornimento (pieno o parziale, quantità e importo facoltativi).
+  Se c'è solo l'importo, la quantità si ricava dal prezzo del distributore o dalla media nazionale.
+- La stima parte dall'ultimo pieno e scala ogni giorno i km dei tragitti abituali previsti in quel
+  giorno. La riserva è a 1/8 del serbatoio.
+- Al pieno successivo, se c'è la quantità, il consumo del profilo si ricalcola con il metodo da
+  pieno a pieno (valori implausibili scartati).
+- Ogni sera alle 18:30 un controllo di WorkManager avvisa se la riserva è entro 2 giorni e propone
+  il distributore più conveniente sul prossimo tragitto. Nessuna localizzazione in background.
+
 ### Mappa
 
 Tile di [OpenFreeMap](https://openfreemap.org/) (gratuite, senza chiave), dati

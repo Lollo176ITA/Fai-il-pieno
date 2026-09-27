@@ -11,13 +11,15 @@ import java.time.LocalDate
 @Database(
     entities = [
         StationEntity::class, PriceEntity::class, FuelAverageEntity::class, DatasetInfoEntity::class,
-        PlaceEntity::class, CommuteEntity::class,
+        PlaceEntity::class, CommuteEntity::class, RefuelEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
     autoMigrations = [
         // 2: luoghi e tragitti abituali (fase 2).
         AutoMigration(from = 1, to = 2),
+        // 3: rifornimenti (fase 3).
+        AutoMigration(from = 2, to = 3),
     ],
 )
 @TypeConverters(Converters::class)
@@ -25,6 +27,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun stationDao(): StationDao
 
     abstract fun commuteDao(): CommuteDao
+
+    abstract fun refuelDao(): RefuelDao
 
     companion object {
         const val NAME = "faiilpieno.db"
