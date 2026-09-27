@@ -8,6 +8,7 @@ import it.faiilpieno.data.db.toEntity
 import it.faiilpieno.data.ors.AddressSuggestion
 import it.faiilpieno.data.ors.OrsClient
 import it.faiilpieno.data.ors.OrsException
+import it.faiilpieno.data.prefs.PreferencesRepository
 import it.faiilpieno.domain.brand.BrandGroup
 import it.faiilpieno.domain.commute.Commute
 import it.faiilpieno.domain.commute.CommuteRanker
@@ -20,6 +21,13 @@ import it.faiilpieno.domain.commute.RouteOffer
 import it.faiilpieno.domain.geo.RouteCorridor
 import it.faiilpieno.domain.model.CarProfile
 import it.faiilpieno.domain.model.GeoPoint
+import java.time.DayOfWeek
+import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,14 +36,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.time.DayOfWeek
-import java.time.Instant
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** Stato del calcolo di un percorso in corso o fallito. Assente = nessun calcolo in sospeso. */
 sealed interface RouteJob {
@@ -48,6 +55,7 @@ class CommuteRepository @Inject constructor(
     private val dao: CommuteDao,
     private val ors: OrsClient,
     private val prices: PriceRepository,
+    private val prefs: PreferencesRepository,
 ) {
     /** I calcoli dei percorsi continuano anche se l'utente lascia la schermata. */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -61,9 +69,27 @@ class CommuteRepository @Inject constructor(
         rows.map(PlaceEntity::toDomain).sortedWith(compareBy({ it.kind.ordinal }, { it.label.lowercase() }))
     }
 
-    val commutes: Flow<List<Commute>> = combine(dao.observeCommutes(), places) { rows, places ->
+    private val generations = ConcurrentHashMap<Long, Long>()
+    private val sequence = AtomicLong()
+    private val routeWrites = Mutex()
+
+    init {
+        // Si ricalcolano solo i percorsi salvati con altre preferenze, o in corso con quelle vecchie:
+        // i tragitti mai calcolati o falliti aspettano l'utente, anche all'avvio o dal worker.
+        scope.launch {
+            prefs.routePreferences.collect { preferences ->
+                dao.observeCommutes().first()
+                    .filter { (it.polyline != null && it.routeAvoidMask != preferences.mask) || _routeJobs.value[it.id] == RouteJob.Running }
+                    .forEach { requestRoute(it.id, force = true) }
+            }
+        }
+    }
+
+    val commutes: Flow<List<Commute>> = combine(dao.observeCommutes(), places, prefs.routePreferences) { rows, places, preferences ->
         val byId = places.associateBy { it.id }
-        rows.mapNotNull { it.toDomain(byId) }
+        rows.mapNotNull { row ->
+            row.toDomain(byId)?.let { if (row.routeAvoidMask == preferences.mask) it else it.copy(route = null) }
+        }
     }
 
     fun commute(id: Long): Flow<Commute?> = commutes.map { list -> list.firstOrNull { it.id == id } }
@@ -81,7 +107,7 @@ class CommuteRepository @Inject constructor(
         if (old != null && (old.lat != place.location.latitude || old.lon != place.location.longitude)) {
             dao.commutesUsing(place.id).forEach { commute ->
                 dao.clearRoute(commute.id)
-                requestRoute(commute.id)
+                requestRoute(commute.id, force = true)
             }
         }
         return place.id
@@ -103,34 +129,44 @@ class CommuteRepository @Inject constructor(
         dao.updateCommuteSettings(id, fromPlaceId, toPlaceId, mask, roundTrip)
         if (old == null || old.fromPlaceId != fromPlaceId || old.toPlaceId != toPlaceId || old.polyline == null) {
             dao.clearRoute(id)
-            requestRoute(id)
+            requestRoute(id, force = true)
         }
         return id
     }
 
     suspend fun deleteCommute(id: Long) {
+        generations[id] = sequence.incrementAndGet()
         dao.deleteCommute(id)
         _routeJobs.update { it - id }
     }
 
     /** Calcola il percorso con OpenRouteService, una volta sola, e lo salva in locale. */
-    fun requestRoute(commuteId: Long) {
-        if (_routeJobs.value[commuteId] == RouteJob.Running) return
+    @Synchronized
+    fun requestRoute(commuteId: Long, force: Boolean = false) {
+        if (!force && _routeJobs.value[commuteId] == RouteJob.Running) return
+        val generation = sequence.incrementAndGet()
+        generations[commuteId] = generation
         _routeJobs.update { it + (commuteId to RouteJob.Running) }
         scope.launch {
             val outcome = runCatching {
+                val preferences = prefs.routePreferences.first()
                 val commute = dao.commute(commuteId) ?: return@runCatching
                 val from = dao.place(commute.fromPlaceId) ?: return@runCatching
                 val to = dao.place(commute.toPlaceId) ?: return@runCatching
-                val route = ors.directions(GeoPoint(from.lat, from.lon), GeoPoint(to.lat, to.lon))
-                dao.updateRoute(commuteId, route.distanceMeters, route.durationSeconds, route.encodedPolyline, Instant.now())
+                val route = ors.directions(GeoPoint(from.lat, from.lon), GeoPoint(to.lat, to.lon), preferences)
+                // An older response must never replace a route requested with newer options.
+                routeWrites.withLock {
+                    if (generations[commuteId] == generation && prefs.routePreferences.first() == preferences) {
+                        dao.updateRoute(commuteId, route.distanceMeters, route.durationSeconds, route.encodedPolyline, Instant.now(), preferences.mask)
+                    }
+                }
             }
-            _routeJobs.update { jobs ->
-                val error = outcome.exceptionOrNull()
-                if (error == null) {
-                    jobs - commuteId
-                } else {
-                    jobs + (commuteId to RouteJob.Failed((error as? OrsException)?.reason ?: OrsException.Reason.SERVER))
+            val error = outcome.exceptionOrNull()
+            if (error is CancellationException) throw error
+            if (generations[commuteId] == generation) {
+                _routeJobs.update { jobs ->
+                    if (error == null) jobs - commuteId
+                    else jobs + (commuteId to RouteJob.Failed((error as? OrsException)?.reason ?: OrsException.Reason.SERVER))
                 }
             }
         }

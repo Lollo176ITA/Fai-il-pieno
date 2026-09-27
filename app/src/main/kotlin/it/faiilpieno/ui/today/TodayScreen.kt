@@ -8,7 +8,6 @@ import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -23,19 +22,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,7 +36,6 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -65,14 +57,11 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.faiilpieno.R
-import it.faiilpieno.ui.components.rememberFullSheetState
 import it.faiilpieno.data.work.SyncStatus
-import it.faiilpieno.domain.brand.BrandGroup
-import it.faiilpieno.domain.model.FuelCategory
-import it.faiilpieno.domain.model.ServiceMode
 import it.faiilpieno.domain.nearby.NearbyResult
 import it.faiilpieno.domain.nearby.RankedOffer
 import it.faiilpieno.domain.nearby.SortMode
+import it.faiilpieno.domain.tank.ReserveAlert
 import it.faiilpieno.ui.components.ConnectedChoiceRow
 import it.faiilpieno.ui.components.EmptyState
 import it.faiilpieno.ui.components.InfoBanner
@@ -81,17 +70,14 @@ import it.faiilpieno.ui.components.PriceDeltaBadge
 import it.faiilpieno.ui.components.PriceText
 import it.faiilpieno.ui.components.SourceAttribution
 import it.faiilpieno.ui.format.Fmt
-import it.faiilpieno.ui.format.brandGroupLabel
 import it.faiilpieno.ui.format.deltaSpoken
 import it.faiilpieno.ui.format.distanceText
 import it.faiilpieno.ui.format.eurosText
 import it.faiilpieno.ui.format.fuelAndModeLabel
 import it.faiilpieno.ui.format.fuelLabel
 import it.faiilpieno.ui.format.kmText
-import it.faiilpieno.ui.format.modeLabel
 import it.faiilpieno.ui.format.priceSpoken
 import it.faiilpieno.ui.format.quantityUnitLabel
-import it.faiilpieno.domain.tank.ReserveAlert
 import it.faiilpieno.ui.refuel.RefuelSheet
 import it.faiilpieno.ui.routes.CommuteAdviceCard
 import it.faiilpieno.ui.routes.commuteTitle
@@ -114,7 +100,6 @@ private val locationPermissions = arrayOf(
 fun TodayScreen(onOpenCar: () -> Unit, onOpenCommute: (Long) -> Unit, viewModel: TodayViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedStation by rememberSaveable { mutableStateOf<Long?>(null) }
-    var showBrands by rememberSaveable { mutableStateOf(false) }
     var showRefuel by rememberSaveable { mutableStateOf(false) }
 
     val results = state.results
@@ -134,7 +119,7 @@ fun TodayScreen(onOpenCar: () -> Unit, onOpenCommute: (Long) -> Unit, viewModel:
             modifier = Modifier.fillMaxSize(),
         ) {
             item(key = "header") {
-                Header(state, viewModel, onShowBrands = { showBrands = true })
+                Header(state, onRefuel = { showRefuel = true })
             }
             banners(state, viewModel, onOpenCar, onRefuel = { showRefuel = true })
             state.commuteAdvice?.let { advice ->
@@ -149,87 +134,22 @@ fun TodayScreen(onOpenCar: () -> Unit, onOpenCommute: (Long) -> Unit, viewModel:
 
     selectedStation?.let { id -> StationDetailSheet(id, onDismiss = { selectedStation = null }) }
     if (showRefuel) RefuelSheet(stationId = null, onDismiss = { showRefuel = false })
-    if (showBrands) {
-        BrandFilterSheet(
-            selected = state.search.brands,
-            onApply = { viewModel.setBrands(it); showBrands = false },
-            onDismiss = { showBrands = false },
-        )
-    }
+
 }
 
 @Composable
-private fun Header(state: TodayUiState, viewModel: TodayViewModel, onShowBrands: () -> Unit) {
-    Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 8.dp)) {
+private fun Header(state: TodayUiState, onRefuel: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(
-            stringResource(R.string.today_title),
-            style = MaterialTheme.typography.displaySmall,
-            modifier = Modifier.semantics { heading() },
+            fuelAndModeLabel(state.car.fuel, state.car.serviceMode),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f).padding(vertical = 8.dp),
         )
-        Spacer(Modifier.size(12.dp))
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-        ) {
-            FuelChip(state.car.fuel, viewModel::setFuel)
-            if (state.car.fuel.hasServiceModes) ModeChips(state.car.serviceMode, viewModel::setServiceMode)
-            val brandCount = state.search.brands.size
-            FilterChip(
-                selected = brandCount > 0,
-                onClick = onShowBrands,
-                label = {
-                    Text(
-                        if (brandCount > 0) stringResource(R.string.filter_brands_count, brandCount)
-                        else stringResource(R.string.filter_brands),
-                    )
-                },
-                leadingIcon = { Icon(painterResource(R.drawable.ic_filter), contentDescription = null, modifier = Modifier.size(18.dp)) },
-                modifier = Modifier.heightIn(min = 48.dp),
-            )
+        TextButton(onClick = onRefuel, modifier = Modifier.heightIn(min = 48.dp)) {
+            Icon(painterResource(R.drawable.ic_add), contentDescription = null, modifier = Modifier.size(18.dp))
+            Text(stringResource(R.string.refuel_action), Modifier.padding(start = 4.dp))
         }
-    }
-}
-
-@Composable
-private fun FuelChip(fuel: FuelCategory, onSelect: (FuelCategory) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val label = fuelLabel(fuel)
-    val description = stringResource(R.string.filter_fuel_a11y, label)
-    Column {
-        FilterChip(
-            selected = true,
-            onClick = { expanded = true },
-            label = { Text(label) },
-            trailingIcon = { Icon(painterResource(R.drawable.ic_expand_more), contentDescription = null, modifier = Modifier.size(18.dp)) },
-            modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = description },
-        )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            FuelCategory.selectable.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(fuelLabel(option)) },
-                    onClick = { onSelect(option); expanded = false },
-                    leadingIcon = if (option == fuel) {
-                        { Icon(painterResource(R.drawable.ic_check), contentDescription = null) }
-                    } else null,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ModeChips(mode: ServiceMode, onSelect: (ServiceMode) -> Unit) {
-    ServiceMode.entries.forEach { option ->
-        FilterChip(
-            selected = option == mode,
-            onClick = { onSelect(option) },
-            label = { Text(modeLabel(option)) },
-            leadingIcon = if (option == mode) {
-                { Icon(painterResource(R.drawable.ic_check), contentDescription = null, modifier = Modifier.size(18.dp)) }
-            } else null,
-            modifier = Modifier.heightIn(min = 48.dp).semantics { role = Role.RadioButton },
-        )
     }
 }
 
@@ -600,45 +520,6 @@ private fun StationRow(ranked: RankedOffer, onClick: () -> Unit) {
         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             PriceText(price.priceMilli, price.category, style = MaterialTheme.typography.headlineSmall)
             ranked.nationalDeltaCents?.let { PriceDeltaBadge(it) }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun BrandFilterSheet(selected: Set<BrandGroup>, onApply: (Set<BrandGroup>) -> Unit, onDismiss: () -> Unit) {
-    var choice by remember { mutableStateOf(selected) }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberFullSheetState()) {
-        Column(Modifier.padding(horizontal = 24.dp).padding(bottom = 24.dp)) {
-            Text(
-                stringResource(R.string.filter_brands_title),
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.semantics { heading() },
-            )
-            Spacer(Modifier.size(8.dp))
-            BrandGroup.entries.forEach { group ->
-                val checked = group in choice
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 48.dp)
-                        .clickable(role = Role.Checkbox) { choice = if (checked) choice - group else choice + group },
-                ) {
-                    Checkbox(checked = checked, onCheckedChange = null)
-                    Text(brandGroupLabel(group), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 16.dp))
-                }
-            }
-            Spacer(Modifier.size(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                TextButton(onClick = { onApply(emptySet()) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.filter_brands_all))
-                }
-                Spacer(Modifier.weight(1f))
-                Button(onClick = { onApply(choice) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.filter_apply))
-                }
-            }
         }
     }
 }

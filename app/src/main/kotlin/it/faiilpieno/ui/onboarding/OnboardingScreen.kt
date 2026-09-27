@@ -8,7 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,12 +23,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -40,11 +39,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -56,24 +53,18 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import it.faiilpieno.R
 import it.faiilpieno.data.location.LocationProvider
 import it.faiilpieno.data.prefs.PreferencesRepository
-import it.faiilpieno.domain.model.CarProfile
-import it.faiilpieno.domain.model.FuelCategory
-import it.faiilpieno.ui.format.fuelLabel
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
+import it.faiilpieno.ui.car.CarForm
+import it.faiilpieno.ui.car.CarViewModel
+import it.faiilpieno.ui.settings.PreferencesViewModel
+import it.faiilpieno.ui.settings.RoutePreferencesCard
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     private val prefs: PreferencesRepository,
     private val locationProvider: LocationProvider,
 ) : ViewModel() {
-    val car: StateFlow<CarProfile> = prefs.carProfile.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CarProfile())
-
-    fun setFuel(fuel: FuelCategory) = viewModelScope.launch { prefs.setFuel(fuel) }
-
     fun hasLocationPermission() = locationProvider.hasPermission()
 
     fun finish() = viewModelScope.launch { prefs.setOnboardingDone() }
@@ -82,10 +73,14 @@ class OnboardingViewModel @Inject constructor(
 private const val PAGES = 3
 
 @Composable
-fun OnboardingScreen(viewModel: OnboardingViewModel = hiltViewModel()) {
+fun OnboardingScreen(viewModel: OnboardingViewModel = hiltViewModel(), preferencesViewModel: PreferencesViewModel = hiltViewModel(), carViewModel: CarViewModel = hiltViewModel()) {
+    val preferences by preferencesViewModel.state.collectAsStateWithLifecycle()
     val pager = rememberPagerState { PAGES }
     val scope = rememberCoroutineScope()
-    val car by viewModel.car.collectAsStateWithLifecycle()
+    val form by carViewModel.form.collectAsStateWithLifecycle()
+    LaunchedEffect(carViewModel) {
+        carViewModel.saved.collect { if (pager.currentPage == 0) pager.animateScrollToPage(1) }
+    }
     var locationGranted by rememberSaveable { mutableStateOf(viewModel.hasLocationPermission()) }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         locationGranted = viewModel.hasLocationPermission()
@@ -97,27 +92,16 @@ fun OnboardingScreen(viewModel: OnboardingViewModel = hiltViewModel()) {
                 Text(stringResource(R.string.onboarding_skip))
             }
         }
-        HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { page ->
+        HorizontalPager(state = pager, userScrollEnabled = false, modifier = Modifier.weight(1f)) { page ->
             when (page) {
-                0 -> Page(R.drawable.ic_gas_station, R.string.onboarding_1_title, R.string.onboarding_1_text)
-                1 -> Page(R.drawable.ic_car, R.string.onboarding_2_title, R.string.onboarding_2_text) {
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        FuelCategory.selectable.forEach { fuel ->
-                            val selected = fuel == car.fuel
-                            FilterChip(
-                                selected = selected,
-                                onClick = { viewModel.setFuel(fuel) },
-                                label = { Text(fuelLabel(fuel), style = MaterialTheme.typography.titleMedium) },
-                                leadingIcon = if (selected) {
-                                    { Icon(painterResource(R.drawable.ic_check), contentDescription = null) }
-                                } else null,
-                                modifier = Modifier.heightIn(min = 56.dp).semantics { role = Role.RadioButton },
-                            )
-                        }
+                0 -> Page(R.drawable.ic_car, R.string.car_title, R.string.onboarding_2_text) {
+                    if (form.loaded) Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        CarForm(form, carViewModel, showSave = false)
                     }
+                }
+                1 -> Page(R.drawable.ic_route, R.string.route_preferences, R.string.onboarding_route_text) {
+                    RoutePreferencesCard(preferences.route, preferencesViewModel::setAvoidance,
+                        showTitle = false, enabled = preferences.loaded, buffer = preferences.buffer, onBufferChange = preferencesViewModel::setBuffer)
                 }
                 else -> Page(R.drawable.ic_my_location, R.string.onboarding_3_title, R.string.onboarding_3_text) {
                     if (locationGranted) {
@@ -142,11 +126,20 @@ fun OnboardingScreen(viewModel: OnboardingViewModel = hiltViewModel()) {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
         ) {
-            PageIndicator(pager.currentPage)
+            if (pager.currentPage > 0) TextButton(onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage - 1) } }) {
+                Text(stringResource(R.string.action_back))
+            } else PageIndicator(pager.currentPage)
             Spacer(Modifier.weight(1f))
             val last = pager.currentPage == PAGES - 1
             Button(
-                onClick = { if (last) viewModel.finish() else scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } },
+                onClick = {
+                    when {
+                        last -> viewModel.finish()
+                        pager.currentPage == 0 -> carViewModel.save()
+                        else -> scope.launch { pager.animateScrollToPage(pager.currentPage + 1) }
+                    }
+                },
+                enabled = form.loaded && preferences.loaded,
                 modifier = Modifier.heightIn(min = 56.dp),
             ) {
                 Text(stringResource(if (last) R.string.onboarding_start else R.string.onboarding_next))
@@ -164,9 +157,9 @@ private fun Page(@DrawableRes icon: Int, title: Int, text: Int, extra: (@Composa
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(120.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+            modifier = Modifier.size(80.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
         ) {
-            Icon(painterResource(icon), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(56.dp))
+            Icon(painterResource(icon), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(40.dp))
         }
         Text(
             stringResource(title),

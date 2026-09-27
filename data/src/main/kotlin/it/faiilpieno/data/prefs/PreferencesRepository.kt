@@ -10,17 +10,18 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import it.faiilpieno.domain.brand.BrandGroup
+import it.faiilpieno.domain.commute.RouteAvoidance
+import it.faiilpieno.domain.commute.RoutePreferences
 import it.faiilpieno.domain.model.CarProfile
-import it.faiilpieno.domain.model.ConsumptionUnit
 import it.faiilpieno.domain.model.FuelCategory
 import it.faiilpieno.domain.model.ServiceMode
 import it.faiilpieno.domain.nearby.SortMode
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 data class SearchPreferences(
     val sortMode: SortMode = SortMode.PRICE,
@@ -51,6 +52,15 @@ class PreferencesRepository @Inject constructor(private val store: DataStore<Pre
 
     /** Distanza massima dal percorso abituale entro cui cercare i distributori. */
     val routeBufferMeters: Flow<Int> = store.data.map { it[ROUTE_BUFFER] ?: DEFAULT_ROUTE_BUFFER_M }.distinctUntilChanged()
+
+    val routePreferences: Flow<RoutePreferences> = store.data.map { RoutePreferences.fromMask(it[ROUTE_AVOID] ?: 0) }.distinctUntilChanged()
+
+    suspend fun setRouteAvoidance(feature: RouteAvoidance, enabled: Boolean) {
+        store.edit { p ->
+            val mask = p[ROUTE_AVOID] ?: 0
+            p[ROUTE_AVOID] = if (enabled) mask or feature.bit else mask and feature.bit.inv()
+        }
+    }
 
     /** Avvisi prima della riserva: null finché l'utente non ha scelto. */
     val reserveAlerts: Flow<Boolean?> = store.data.map { it[RESERVE_ALERTS] }.distinctUntilChanged()
@@ -124,6 +134,7 @@ class PreferencesRepository @Inject constructor(private val store: DataStore<Pre
         private val SORT_MODE = stringPreferencesKey("sort_mode")
         private val BRANDS = stringSetPreferencesKey("brand_filter")
         private val ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
+        private val ROUTE_AVOID = intPreferencesKey("route_avoid_mask")
         private val ROUTE_BUFFER = intPreferencesKey("route_buffer_m")
         private val RESERVE_ALERTS = booleanPreferencesKey("reserve_alerts")
         private val LAST_RESERVE_ALERT = longPreferencesKey("last_reserve_alert_day")

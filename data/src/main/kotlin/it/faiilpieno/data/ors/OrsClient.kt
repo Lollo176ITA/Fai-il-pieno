@@ -1,10 +1,15 @@
 package it.faiilpieno.data.ors
 
 import it.faiilpieno.data.BuildConfig
+import it.faiilpieno.domain.commute.RoutePreferences
 import it.faiilpieno.domain.model.GeoPoint
+import java.io.IOException
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -14,9 +19,6 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** Percorso restituito da OpenRouteService: geometria come encoded polyline (precisione 5). */
 data class OrsRoute(val distanceMeters: Double, val durationSeconds: Double, val encodedPolyline: String)
@@ -52,13 +54,14 @@ class OrsClient @Inject constructor(
     val hasKey: Boolean get() = apiKey.isNotBlank()
 
     /** Percorso in auto da [from] a [to]. */
-    suspend fun directions(from: GeoPoint, to: GeoPoint): OrsRoute {
+    suspend fun directions(from: GeoPoint, to: GeoPoint, preferences: RoutePreferences = RoutePreferences()): OrsRoute {
         val body = json.encodeToString(
             DirectionsRequest.serializer(),
             DirectionsRequest(
                 coordinates = listOf(listOf(from.longitude, from.latitude), listOf(to.longitude, to.latitude)),
                 // Casa e lavoro possono essere lontani dalla strada (cortili, parcheggi): 1 km di tolleranza.
                 radiuses = listOf(SNAP_RADIUS_M, SNAP_RADIUS_M),
+                options = DirectionsOptions(preferences.apiFeatures),
             ),
         )
         val request = Request.Builder()
@@ -152,9 +155,13 @@ class OrsClient @Inject constructor(
     private data class DirectionsRequest(
         val coordinates: List<List<Double>>,
         val radiuses: List<Int>,
+        val options: DirectionsOptions,
         val instructions: Boolean = false,
         val preference: String = "recommended",
     )
+
+    @Serializable
+    internal data class DirectionsOptions(@SerialName("avoid_features") val avoidFeatures: List<String>)
 
     @Serializable
     private data class DirectionsResponse(val routes: List<RouteJson> = emptyList())

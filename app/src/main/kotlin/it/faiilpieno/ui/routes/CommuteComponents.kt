@@ -104,8 +104,14 @@ fun CommuteAdviceCard(
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (onSecondaryAction != null && secondaryActionLabel != null) {
+                TextButton(onClick = onSecondaryAction, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                    Icon(painterResource(R.drawable.ic_route), contentDescription = secondaryActionLabel, modifier = Modifier.size(20.dp))
+                }
+            }
             Column(Modifier.clearAndSetSemantics { contentDescription = description }) {
-                Text(label.uppercase(), style = MaterialTheme.typography.labelLarge)
+                if (onSecondaryAction == null) Text(label, style = MaterialTheme.typography.labelLarge)
                 Spacer(Modifier.size(4.dp))
                 Text(station.brand, style = MaterialTheme.typography.headlineSmall)
                 Text(
@@ -139,12 +145,7 @@ fun CommuteAdviceCard(
                     Text(stringResource(R.string.action_details))
                 }
             }
-            if (secondaryActionLabel != null && onSecondaryAction != null) {
-                TextButton(onClick = onSecondaryAction, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Icon(painterResource(R.drawable.ic_route), contentDescription = null, modifier = Modifier.size(18.dp))
-                    Text(secondaryActionLabel, modifier = Modifier.padding(start = 8.dp))
-                }
-            }
+
         }
     }
 }

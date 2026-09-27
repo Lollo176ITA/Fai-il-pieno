@@ -13,13 +13,15 @@ import java.time.LocalDate
         StationEntity::class, PriceEntity::class, FuelAverageEntity::class, DatasetInfoEntity::class,
         PlaceEntity::class, CommuteEntity::class, RefuelEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
     autoMigrations = [
         // 2: luoghi e tragitti abituali (fase 2).
         AutoMigration(from = 1, to = 2),
         // 3: rifornimenti (fase 3).
         AutoMigration(from = 2, to = 3),
+        // 4: esclusioni (autostrade, pedaggi, traghetti) con cui è stato calcolato il percorso.
+        AutoMigration(from = 3, to = 4),
     ],
 )
 @TypeConverters(Converters::class)

@@ -91,11 +91,26 @@ risparmio = (prezzo_medio_zona − prezzo) × litri − km_deviazione × consumo
 - **Deviazione:** i km in più, andata e ritorno, rispetto al distributore più vicino.
 - **Consiglio:** un distributore viene proposto solo se il risparmio è positivo.
 
+### Interfaccia e preferenze
+
+Tre sezioni: **Oggi**, **Mappa** e **Percorsi**. Le impostazioni si aprono dall'ingranaggio
+in alto a destra. Auto, carburante, servizio, marchi e preferenze di viaggio sono riuniti lì;
+la prima configurazione raccoglie auto e preferenze di viaggio. I gruppi a scelta singola
+usano lo stato selezionato senza spunte; gli interruttori indicano le esclusioni attive.
+
+Il dettaglio del tragitto include una mappa con zoom, trascinamento e ricentratura.
+**Opzioni percorso** apre le preferenze condivise: evita autostrade, pedaggi o traghetti,
+e distanza dei distributori dalla strada. Le esclusioni vengono inviate come `avoid_features`
+a OpenRouteService e ricalcolano i tragitti salvati. Un percorso calcolato con altre
+preferenze non viene usato per i consigli finché il ricalcolo non termina; in caso di errore
+si può riprovare. Room v4 conserva le esclusioni usate per ogni percorso, con migrazione
+non distruttiva dalla v3.
+
 ### Percorsi abituali
 
 - L'utente salva i luoghi (Casa, Lavoro, Università, altri) cercando l'indirizzo o usando la
   posizione attuale, poi i tragitti tra due luoghi con i giorni della settimana.
-- Il percorso in auto si calcola **una volta** con OpenRouteService e si salva in locale come
+- Il percorso in auto si calcola con OpenRouteService e si salva in locale come
   encoded polyline: le ricerche successive non usano la rete.
 - Si cercano i distributori entro una fascia attorno al percorso (predefinita 500 m) con la
   distanza punto-segmento; i segmenti sono indicizzati in una griglia di circa 1 km.

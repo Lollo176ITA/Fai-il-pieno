@@ -59,13 +59,6 @@ fun RoutesScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LazyColumn(contentPadding = PaddingValues(bottom = 24.dp), modifier = Modifier.fillMaxSize()) {
-        item(key = "title") {
-            Text(
-                stringResource(R.string.routes_title),
-                style = MaterialTheme.typography.displaySmall,
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 8.dp).semantics { heading() },
-            )
-        }
         if (!state.hasApiKey) {
             item(key = "no-key") {
                 InfoBanner(R.drawable.ic_warning, stringResource(R.string.routes_no_key), Modifier.padding(horizontal = 16.dp, vertical = 4.dp))

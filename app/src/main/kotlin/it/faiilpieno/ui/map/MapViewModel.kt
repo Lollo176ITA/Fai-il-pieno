@@ -6,6 +6,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import it.faiilpieno.data.location.LocationProvider
 import it.faiilpieno.data.location.LocationResult
 import it.faiilpieno.data.prefs.PreferencesRepository
+import it.faiilpieno.data.repository.CommuteRepository
+import it.faiilpieno.domain.commute.Commute
 import it.faiilpieno.data.repository.PriceRepository
 import it.faiilpieno.domain.geo.BoundingBox
 import it.faiilpieno.domain.model.CarProfile
@@ -33,6 +35,7 @@ data class MapUiState(
     val nationalAverage: Int? = null,
     val zoomTooLow: Boolean = true,
     val userLocation: GeoPoint? = null,
+    val commutes: List<Commute> = emptyList(),
 )
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -41,6 +44,7 @@ class MapViewModel @Inject constructor(
     private val prices: PriceRepository,
     prefs: PreferencesRepository,
     private val locationProvider: LocationProvider,
+    commutes: CommuteRepository,
 ) : ViewModel() {
 
     private val viewport = MutableStateFlow<Viewport?>(null)
@@ -64,22 +68,22 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    val uiState: StateFlow<MapUiState> = combine(prices.datasetInfo, prefs.carProfile, area, userLocation) { info, car, a, user ->
-        MapUiState(info, car, a.offers, a.nationalAverage, a.zoomTooLow, user)
+    val uiState: StateFlow<MapUiState> = combine(prices.datasetInfo, prefs.carProfile, area, userLocation, commutes.commutes) { info, car, a, user, routes ->
+        MapUiState(info, car, a.offers, a.nationalAverage, a.zoomTooLow, user, routes)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MapUiState())
 
     init {
-        locateUser()
+        viewModelScope.launch { locateUser() }
     }
 
     fun onViewportChanged(box: BoundingBox, zoom: Double) {
         viewport.value = Viewport(box, zoom)
     }
 
-    fun locateUser() {
-        viewModelScope.launch {
-            (locationProvider.current() as? LocationResult.Found)?.let { userLocation.value = it.point }
-        }
+    suspend fun locateUser(): GeoPoint? {
+        val found = (locationProvider.current() as? LocationResult.Found)?.point
+        if (found != null) userLocation.value = found
+        return found
     }
 
     companion object {

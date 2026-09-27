@@ -2,7 +2,6 @@ package it.faiilpieno.ui.routes
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,13 +12,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -33,10 +34,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -53,19 +52,26 @@ import it.faiilpieno.ui.components.EmptyState
 import it.faiilpieno.ui.components.InfoBanner
 import it.faiilpieno.ui.components.LoadingState
 import it.faiilpieno.ui.components.SourceAttribution
+import it.faiilpieno.ui.components.rememberFullSheetState
+import it.faiilpieno.ui.map.rememberMapCameraState
 import it.faiilpieno.ui.format.Fmt
 import it.faiilpieno.ui.format.distanceText
 import it.faiilpieno.ui.format.fuelAndModeLabel
 import it.faiilpieno.ui.format.fuelLabel
+import it.faiilpieno.ui.settings.PreferencesViewModel
+import it.faiilpieno.ui.settings.RoutePreferencesCard
 import it.faiilpieno.ui.station.StationDetailSheet
 import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CommuteDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, viewModel: CommuteDetailViewModel = hiltViewModel()) {
+fun CommuteDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, viewModel: CommuteDetailViewModel = hiltViewModel(), preferencesViewModel: PreferencesViewModel = hiltViewModel()) {
+    val preferences by preferencesViewModel.state.collectAsStateWithLifecycle()
+    var showOptions by rememberSaveable { mutableStateOf(false) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     var selectedStation by rememberSaveable { mutableStateOf<Long?>(null) }
     val commute = state.commute
+    val mapCamera = rememberMapCameraState()
 
     Scaffold(
         topBar = {
@@ -110,7 +116,15 @@ fun CommuteDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, viewModel: C
                 modifier = Modifier.fillMaxSize().padding(padding),
             ) {
                 item(key = "info") { RouteInfo(commute, state.job, viewModel::recomputeRoute) }
-                item(key = "buffer") { BufferPicker(state.bufferMeters, viewModel::setBuffer) }
+                commute.route?.let { route ->
+                    item(key = "map") { RouteMap(route, mapCamera, Modifier.fillMaxWidth().padding(horizontal = 16.dp)) }
+                }
+                item(key = "options") {
+                    FilledTonalButton(onClick = { showOptions = true }, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).heightIn(min = 48.dp)) {
+                        Icon(painterResource(R.drawable.ic_filter), contentDescription = null)
+                        Text(stringResource(R.string.route_options), Modifier.padding(start = 8.dp))
+                    }
+                }
                 if (state.brands.isNotEmpty()) {
                     item(key = "brands") {
                         InfoBanner(
@@ -138,6 +152,15 @@ fun CommuteDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, viewModel: C
         }
     }
 
+    if (showOptions) ModalBottomSheet(onDismissRequest = { showOptions = false }, sheetState = rememberFullSheetState()) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            RoutePreferencesCard(preferences.route, preferencesViewModel::setAvoidance,
+                enabled = preferences.loaded, buffer = preferences.buffer, onBufferChange = preferencesViewModel::setBuffer)
+            Text(stringResource(R.string.route_options_shared), style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            FilledTonalButton(onClick = { showOptions = false }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_close)) }
+        }
+    }
     selectedStation?.let { id -> StationDetailSheet(id, onDismiss = { selectedStation = null }) }
 }
 
@@ -175,33 +198,6 @@ private fun RouteProblem(text: String, onRetry: () -> Unit) {
             Icon(painterResource(R.drawable.ic_refresh), contentDescription = null, modifier = Modifier.size(18.dp))
             Text(stringResource(R.string.action_retry), modifier = Modifier.padding(start = 8.dp))
         }
-    }
-}
-
-@Composable
-private fun BufferPicker(selected: Int, onSelect: (Int) -> Unit) {
-    Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.commute_buffer), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
-        // FlowRow e non una riga fissa: con il testo ingrandito i chip vanno a capo.
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            PreferencesRepository.ROUTE_BUFFER_OPTIONS.forEach { meters ->
-                val isSelected = meters == selected
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { onSelect(meters) },
-                    label = { Text(distanceText(meters.toDouble()), style = MaterialTheme.typography.labelLarge) },
-                    leadingIcon = if (isSelected) {
-                        { Icon(painterResource(R.drawable.ic_check), contentDescription = null, modifier = Modifier.size(18.dp)) }
-                    } else null,
-                    modifier = Modifier.heightIn(min = 48.dp).semantics { role = Role.RadioButton },
-                )
-            }
-        }
-        Text(
-            stringResource(R.string.commute_buffer_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 

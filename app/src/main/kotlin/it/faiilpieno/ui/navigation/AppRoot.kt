@@ -2,23 +2,38 @@ package it.faiilpieno.ui.navigation
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -45,18 +60,18 @@ import it.faiilpieno.ui.routes.PlaceEditScreen
 import it.faiilpieno.ui.routes.RoutesRoute
 import it.faiilpieno.ui.routes.RoutesScreen
 import it.faiilpieno.ui.today.TodayScreen
+import javax.inject.Inject
+import kotlin.reflect.KClass
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.serialization.Serializable
-import javax.inject.Inject
-import kotlin.reflect.KClass
 
 @Serializable data object TodayRoute
 
 @Serializable data object MapRoute
 
-@Serializable data object CarRoute
+@Serializable data object SettingsRoute
 
 /** [routeClasses]: le destinazioni in cui la scheda risulta selezionata (anche quelle annidate). */
 private enum class Tab(val route: Any, val routeClasses: Set<KClass<*>>, @StringRes val label: Int, @DrawableRes val icon: Int) {
@@ -68,7 +83,7 @@ private enum class Tab(val route: Any, val routeClasses: Set<KClass<*>>, @String
         R.string.tab_routes,
         R.drawable.ic_route,
     ),
-    CAR(CarRoute, setOf(CarRoute::class), R.string.tab_car, R.drawable.ic_car),
+
 }
 
 @HiltViewModel
@@ -89,10 +104,44 @@ fun AppRoot(viewModel: RootViewModel = hiltViewModel()) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainScaffold() {
     val navController = rememberNavController()
-    Scaffold(bottomBar = { BottomBar(navController) }) { padding ->
+    val entry by navController.currentBackStackEntryAsState()
+    val destination = entry?.destination
+    val tab = Tab.entries.firstOrNull { destination?.hasRoute(it.route::class) == true }
+    val settings = destination?.hasRoute<SettingsRoute>() == true
+    Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
+        topBar = {
+            if (tab != null || settings) {
+                TopAppBar(
+                    expandedHeight = (64 * LocalDensity.current.fontScale.coerceAtLeast(1f)).dp,
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
+                    title = {
+                        Column {
+                            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                            Text(stringResource(if (settings) R.string.settings_title else tab!!.label),
+                                style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
+                        }
+                    },
+                    navigationIcon = {
+                        if (settings) IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.action_back))
+                        }
+                    },
+                    actions = {
+                        if (!settings) FilledTonalIconButton(
+                            onClick = { navController.navigate(SettingsRoute) { launchSingleTop = true } },
+                            modifier = Modifier.padding(end = 12.dp).size(48.dp),
+                        ) { Icon(painterResource(R.drawable.ic_settings), stringResource(R.string.settings_title)) }
+                    },
+                )
+            }
+        },
+        bottomBar = { if (tab != null) BottomBar(navController) },
+    ) { padding ->
         NavHost(
             navController = navController,
             startDestination = TodayRoute,
@@ -100,11 +149,11 @@ private fun MainScaffold() {
         ) {
             composable<TodayRoute> {
                 TodayScreen(
-                    onOpenCar = { navController.navigateToTab(Tab.CAR) },
+                    onOpenCar = { navController.navigate(SettingsRoute) },
                     onOpenCommute = { navController.navigate(CommuteDetailRoute(it)) },
                 )
             }
-            composable<MapRoute> { MapScreen() }
+            composable<MapRoute> { MapScreen(onOpenCommute = { navController.navigate(CommuteDetailRoute(it)) }) }
             composable<RoutesRoute> {
                 RoutesScreen(
                     onAddPlace = { kind -> navController.navigate(PlaceEditRoute(kind = kind?.name)) },
@@ -137,7 +186,7 @@ private fun MainScaffold() {
                     onEdit = { navController.navigate(CommuteEditRoute(it)) },
                 )
             }
-            composable<CarRoute> { CarScreen() }
+            composable<SettingsRoute> { CarScreen() }
         }
     }
 }
@@ -152,7 +201,7 @@ private fun BottomBar(navController: NavHostController) {
                 selected = tab.routeClasses.any { destination?.hasRoute(it) == true },
                 onClick = { navController.navigateToTab(tab) },
                 icon = { Icon(painterResource(tab.icon), contentDescription = null) },
-                // Con quattro schede e il testo ingrandito "La mia auto" non sta su una riga: va a capo.
+                // Le etichette possono andare a capo con il testo ingrandito.
                 label = {
                     Text(stringResource(tab.label), maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
                 },

@@ -4,8 +4,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
-import kotlinx.coroutines.flow.Flow
 import java.time.Instant
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CommuteDao {
@@ -40,8 +40,8 @@ interface CommuteDao {
     @Query("UPDATE commutes SET fromPlaceId = :fromPlaceId, toPlaceId = :toPlaceId, daysMask = :daysMask, roundTrip = :roundTrip WHERE id = :id")
     suspend fun updateCommuteSettings(id: Long, fromPlaceId: Long, toPlaceId: Long, daysMask: Int, roundTrip: Boolean)
 
-    @Query("UPDATE commutes SET distanceM = :distanceM, durationS = :durationS, polyline = :polyline, computedAt = :computedAt WHERE id = :id")
-    suspend fun updateRoute(id: Long, distanceM: Double, durationS: Double, polyline: String, computedAt: Instant)
+    @Query("UPDATE commutes SET distanceM = :distanceM, durationS = :durationS, polyline = :polyline, computedAt = :computedAt, routeAvoidMask = :avoidMask WHERE id = :id")
+    suspend fun updateRoute(id: Long, distanceM: Double, durationS: Double, polyline: String, computedAt: Instant, avoidMask: Int)
 
     @Query("UPDATE commutes SET distanceM = NULL, durationS = NULL, polyline = NULL, computedAt = NULL WHERE id = :id")
     suspend fun clearRoute(id: Long)

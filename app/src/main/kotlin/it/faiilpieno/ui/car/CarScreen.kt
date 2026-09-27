@@ -1,6 +1,7 @@
 package it.faiilpieno.ui.car
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
@@ -22,10 +23,15 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -36,8 +42,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.Box
-import androidx.compose.ui.Alignment
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.faiilpieno.R
@@ -50,9 +54,16 @@ import it.faiilpieno.ui.format.Fmt
 import it.faiilpieno.ui.format.fuelLabel
 import it.faiilpieno.ui.format.modeLabel
 import it.faiilpieno.ui.format.quantityUnitLabel
+import it.faiilpieno.ui.settings.BrandFilterSheet
+import it.faiilpieno.ui.settings.PreferencesViewModel
+import it.faiilpieno.ui.settings.RoutePreferencesCard
 
 @Composable
-fun CarScreen(viewModel: CarViewModel = hiltViewModel()) {
+fun CarScreen(viewModel: CarViewModel = hiltViewModel(), preferencesViewModel: PreferencesViewModel = hiltViewModel()) {
+    val preferences by preferencesViewModel.state.collectAsStateWithLifecycle()
+    var showBrands by rememberSaveable { mutableStateOf(false) }
+    if (showBrands) BrandFilterSheet(preferences.search.brands,
+        onApply = { preferencesViewModel.setBrands(it); showBrands = false }, onDismiss = { showBrands = false })
     val form by viewModel.form.collectAsStateWithLifecycle()
     val dataInfo by viewModel.dataInfo.collectAsStateWithLifecycle()
     val tank by viewModel.tank.collectAsStateWithLifecycle()
@@ -69,21 +80,29 @@ fun CarScreen(viewModel: CarViewModel = hiltViewModel()) {
                 .padding(top = 24.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            Text(
-                stringResource(R.string.car_title),
-                style = MaterialTheme.typography.displaySmall,
-                modifier = Modifier.semantics { heading() },
-            )
-            if (tank.loaded) TankCard(tank, form.fuel, onAlertsChange = { viewModel.setAlerts(it) }, onUndo = { viewModel.undoLastRefuel() })
-            if (form.loaded) CarForm(form, viewModel)
-            DataSection(dataInfo, onRefresh = viewModel::refreshData)
+            SettingsGroup(stringResource(R.string.car_title), initiallyExpanded = true) {
+                if (form.loaded) CarForm(form, viewModel)
+            }
+            RoutePreferencesCard(preferences.route, preferencesViewModel::setAvoidance,
+                enabled = preferences.loaded, buffer = preferences.buffer, onBufferChange = preferencesViewModel::setBuffer)
+            FilledTonalButton(onClick = { showBrands = true }, enabled = preferences.loaded, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
+                Icon(painterResource(R.drawable.ic_filter), contentDescription = null)
+                Text(stringResource(if (preferences.search.brands.isEmpty()) R.string.filter_brands_all else R.string.filter_brands_count,
+                    preferences.search.brands.size), modifier = Modifier.padding(start = 8.dp))
+            }
+            SettingsGroup(stringResource(R.string.tank_title)) {
+                if (tank.loaded) TankCard(tank, form.fuel, onAlertsChange = { viewModel.setAlerts(it) }, onUndo = { viewModel.undoLastRefuel() })
+            }
+            SettingsGroup(stringResource(R.string.car_data_title)) {
+                DataSection(dataInfo, onRefresh = viewModel::refreshData)
+            }
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
 }
 
 @Composable
-private fun CarForm(form: CarForm, viewModel: CarViewModel) {
+internal fun CarForm(form: CarForm, viewModel: CarViewModel, showSave: Boolean = true) {
     val kg = form.fuel.isSoldByKg
 
     Section(stringResource(R.string.car_fuel)) {
@@ -95,9 +114,6 @@ private fun CarForm(form: CarForm, viewModel: CarViewModel) {
                     selected = selected,
                     onClick = { viewModel.setFuel(fuel) },
                     label = { Text(fuelLabel(fuel), style = MaterialTheme.typography.labelLarge) },
-                    leadingIcon = if (selected) {
-                        { Icon(painterResource(R.drawable.ic_check), contentDescription = null, modifier = Modifier.size(18.dp)) }
-                    } else null,
                     modifier = Modifier.heightIn(min = 48.dp).semantics { role = Role.RadioButton },
                 )
             }
@@ -110,9 +126,7 @@ private fun CarForm(form: CarForm, viewModel: CarViewModel) {
             onValueChange = viewModel::setTank,
             suffix = { Text(quantityUnitLabel(form.fuel)) },
             isError = form.tankError,
-            supportingText = {
-                Text(stringResource(if (form.tankError) R.string.car_invalid_number else R.string.car_tank_hint))
-            },
+            supportingText = if (form.tankError) ({ Text(stringResource(R.string.car_invalid_number)) }) else null,
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth(),
@@ -133,9 +147,7 @@ private fun CarForm(form: CarForm, viewModel: CarViewModel) {
             onValueChange = viewModel::setConsumption,
             suffix = { Text(unitLabel(form.unit, kg)) },
             isError = form.consumptionError,
-            supportingText = {
-                Text(stringResource(if (form.consumptionError) R.string.car_invalid_number else R.string.car_consumption_hint))
-            },
+            supportingText = if (form.consumptionError) ({ Text(stringResource(R.string.car_invalid_number)) }) else null,
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
             modifier = Modifier.fillMaxWidth(),
@@ -152,7 +164,7 @@ private fun CarForm(form: CarForm, viewModel: CarViewModel) {
         )
     }
 
-    Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
+    if (showSave) Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
         Text(stringResource(R.string.car_save))
     }
 }
@@ -203,6 +215,21 @@ private fun DataSection(state: DataInfoState, onRefresh: () -> Unit) {
                     modifier = Modifier.padding(start = 8.dp),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun SettingsGroup(title: String, initiallyExpanded: Boolean = false, content: @Composable () -> Unit) {
+    var expanded by rememberSaveable { mutableStateOf(initiallyExpanded) }
+    Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            TextButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).semantics { heading() })
+                Icon(painterResource(if (expanded) R.drawable.ic_arrow_up else R.drawable.ic_expand_more),
+                    contentDescription = stringResource(if (expanded) R.string.action_collapse else R.string.action_expand))
+            }
+            if (expanded) content()
         }
     }
 }

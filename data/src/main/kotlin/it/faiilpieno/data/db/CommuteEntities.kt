@@ -1,5 +1,6 @@
 package it.faiilpieno.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -44,6 +45,7 @@ data class CommuteEntity(
     /** Encoded polyline, precisione 5. */
     val polyline: String? = null,
     val computedAt: Instant? = null,
+    @ColumnInfo(defaultValue = "0") val routeAvoidMask: Int = 0,
 )
 
 fun PlaceEntity.toDomain() = Place(id, label, kind, GeoPoint(lat, lon), address)

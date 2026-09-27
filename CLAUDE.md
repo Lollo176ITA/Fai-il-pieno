@@ -34,7 +34,8 @@ kotlinx.serialization, MapLibre + OpenFreeMap. AGP 9 con Kotlin integrato (nient
 
 - `:domain` Kotlin/JVM puro: logica e calcoli, **ogni nuovo calcolo va qui, con i test**.
 - `:data` Room, DataStore, rete, worker, posizione.
-- `:app` UI Compose, ViewModel, navigazione (4 schede: Oggi, Mappa, Percorsi, La mia auto).
+- `:app` UI Compose, ViewModel, navigazione (3 schede: Oggi, Mappa, Percorsi; le Impostazioni,
+  con auto, carburante, servizio, marchi e preferenze di viaggio, si aprono dall'ingranaggio in alto).
 
 ## Decisioni già prese (non rimetterle in discussione senza motivo)
 
@@ -49,15 +50,18 @@ kotlinx.serialization, MapLibre + OpenFreeMap. AGP 9 con Kotlin integrato (nient
   localizzazione in background.
 - Distributore consigliato solo se il risparmio netto è positivo. Rifornimento tipico = 80% del
   serbatoio. Deviazione = km in più, andata e ritorno, rispetto al distributore più vicino.
-- Room è alla versione 3 (v2: `places` e `commutes`; v3: `refuels`, senza chiave esterna verso
-  `stations`, che l'import MIMIT svuota ogni giorno). **Ogni modifica allo schema richiede di
+- Room è alla versione 4 (v2: `places` e `commutes`; v3: `refuels`, senza chiave esterna verso
+  `stations`, che l'import MIMIT svuota ogni giorno; v4: `commutes.routeAvoidMask`). **Ogni modifica allo schema richiede di
   incrementare la versione e aggiungere una migrazione** (`AutoMigration` dove basta).
 - OpenRouteService: host **`api.heigit.org`** (`api.openrouteservice.org` è dismesso dal 24/8/2026).
   Percorsi: `POST /openrouteservice/v2/directions/driving-car/json`; indirizzi: `GET /pelias/v1/search`
   (non `autocomplete`, che sbaglia gli indirizzi completi). Chiave nell'header `Authorization`,
   letta da `local.properties` in `BuildConfig.ORS_API_KEY` del modulo `:data`.
 - Tragitti: percorso calcolato una volta e salvato come encoded polyline; si ricalcola solo se
-  cambiano i luoghi o su richiesta. Il ritorno si assume sulla stessa strada.
+  cambiano i luoghi, su richiesta o se cambiano le preferenze di viaggio (evita autostrade,
+  pedaggi, traghetti → `avoid_features`, condivise da tutti i tragitti). Un percorso salvato con
+  altre preferenze non si usa per i consigli. I tragitti mai calcolati o falliti non si
+  ricalcolano da soli. Il ritorno si assume sulla stessa strada.
 - Distributori sul tragitto: entro la fascia scelta (250 m / 500 m predefinito / 1 km / 2 km).
   Deviazione = 2 × distanza in linea d'aria dal percorso. Media di zona = media della fascia;
   con meno di 3 distributori si usa la media nazionale (e la UI lo dice). Il filtro marchi della
@@ -70,7 +74,7 @@ kotlinx.serialization, MapLibre + OpenFreeMap. AGP 9 con Kotlin integrato (nient
 - Calibrazione da pieno a pieno (litri ÷ km stimati), accettata tra ½ e 2× il consumo attuale e con
   almeno 50 km; aggiorna subito il profilo e lo dice (scelta dell'utente). Assorbe anche i km
   guidati fuori dai tragitti.
-- UI della fase 3 (scelte dell'utente): card Serbatoio in cima a La mia auto con "Ho fatto il
+- UI della fase 3 (scelte dell'utente): card Serbatoio in cima alle Impostazioni con "Ho fatto il
   pieno"; avviso in Oggi quando la riserva è entro 3 giorni; "Ho fatto il pieno qui" nel dettaglio
   del distributore. Permesso notifiche chiesto dopo il primo pieno registrato, poi interruttore.
 - Notifica: `ReserveCheckWorker` ogni giorno alle 18:30, se la riserva è entro 2 giorni (stima di

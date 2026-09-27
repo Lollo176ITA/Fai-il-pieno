@@ -5,6 +5,28 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.runtime.rememberCoroutineScope
+import it.faiilpieno.domain.commute.Commute
+import it.faiilpieno.ui.routes.commuteTitle
+import it.faiilpieno.ui.routes.durationText
+import it.faiilpieno.ui.format.distanceText
+import it.faiilpieno.ui.components.rememberFullSheetState
+import kotlinx.coroutines.launch
+import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.geojson.LineString
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -64,6 +86,8 @@ import org.maplibre.geojson.Point
 
 private const val STYLE_LIGHT = "https://tiles.openfreemap.org/styles/liberty"
 private const val STYLE_DARK = "https://tiles.openfreemap.org/styles/dark"
+private const val SOURCE_ROUTES = "saved-routes"
+private const val LAYER_ROUTES = "saved-routes-lines"
 private const val SOURCE_STATIONS = "stations"
 private const val SOURCE_USER = "user"
 private const val LAYER_CIRCLES = "stations-circles"
@@ -71,91 +95,176 @@ private const val LAYER_LABELS = "stations-labels"
 private const val LAYER_USER = "user-dot"
 private val ITALY = LatLng(42.5, 12.5)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MapScreen(viewModel: MapViewModel = hiltViewModel()) {
+fun MapScreen(onOpenCommute: (Long) -> Unit, viewModel: MapViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val dark = isSystemInDarkTheme()
     val priceColors = LocalPriceColors.current
     val neutral = MaterialTheme.colorScheme.secondary
     val halo = MaterialTheme.colorScheme.surface
-    // Area di tocco di 48 dp attorno al punto toccato.
+    val routeColor = MaterialTheme.colorScheme.primary
+    val otherRouteColor = MaterialTheme.colorScheme.tertiary
+    val scope = rememberCoroutineScope()
     val touchPx = with(LocalDensity.current) { 24.dp.toPx() }
+    val fitPadding = with(LocalDensity.current) { 64.dp.roundToPx() }
 
     var selectedStation by rememberSaveable { mutableStateOf<Long?>(null) }
-    var centeredOnUser by rememberSaveable { mutableStateOf(false) }
+    var selectedRoute by rememberSaveable { mutableStateOf<Long?>(null) }
+    var showRoutes by rememberSaveable { mutableStateOf(false) }
+    val camera = rememberMapCameraState()
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var style by remember { mutableStateOf<Style?>(null) }
-
     val mapView = remember { MapView(context).apply { onCreate(null) } }
     MapLifecycle(mapView)
+    PersistMapCamera(map, camera)
 
     val onViewport by rememberUpdatedState(viewModel::onViewportChanged)
-    LaunchedEffect(mapView, dark) {
-        mapView.getMapAsync { m ->
-            map = m
-            m.uiSettings.setRotateGesturesEnabled(false)
-            m.uiSettings.setTiltGesturesEnabled(false)
-            // Attribuzione OSM e fonte MIMIT sono nel riquadro in sovraimpressione.
-            m.uiSettings.setAttributionEnabled(false)
-            m.uiSettings.setLogoEnabled(false)
-            if (!centeredOnUser) m.moveCamera(CameraUpdateFactory.newLatLngZoom(ITALY, 5.0))
-            m.setStyle(Style.Builder().fromUri(if (dark) STYLE_DARK else STYLE_LIGHT)) { loaded ->
-                addStationLayers(loaded, halo.toArgb(), if (dark) Color.White.toArgb() else Color(0xFF1C1B1F).toArgb())
-                style = loaded
-            }
-            m.addOnCameraIdleListener {
+    DisposableEffect(mapView) {
+        var active = true
+        var boundMap: MapLibreMap? = null
+        val idle = MapLibreMap.OnCameraIdleListener {
+            boundMap?.let { m ->
+                camera.position = m.cameraPosition
                 val b = m.projection.visibleRegion.latLngBounds
                 onViewport(BoundingBox(b.latitudeSouth, b.latitudeNorth, b.longitudeWest, b.longitudeEast), m.cameraPosition.zoom)
             }
-            m.addOnMapClickListener { latLng ->
+        }
+        val clicked = MapLibreMap.OnMapClickListener { latLng ->
+            val m = boundMap
+            if (m == null) false else {
                 val p = m.projection.toScreenLocation(latLng)
-                m.queryRenderedFeatures(RectF(p.x - touchPx, p.y - touchPx, p.x + touchPx, p.y + touchPx), LAYER_CIRCLES, LAYER_LABELS)
+                val hit = RectF(p.x - touchPx, p.y - touchPx, p.x + touchPx, p.y + touchPx)
+                val station = m.queryRenderedFeatures(hit, LAYER_CIRCLES, LAYER_LABELS)
                     .firstNotNullOfOrNull { it.getNumberProperty("id")?.toLong() }
-                    ?.let { selectedStation = it; true } ?: false
+                val route = m.queryRenderedFeatures(hit, LAYER_ROUTES)
+                    .firstNotNullOfOrNull { it.getNumberProperty("commuteId")?.toLong() }
+                when {
+                    station != null -> { selectedStation = station; true }
+                    route != null -> { selectedRoute = route; true }
+                    else -> false
+                }
             }
         }
+        mapView.getMapAsync { m ->
+            if (active) {
+                boundMap = m
+                m.uiSettings.setRotateGesturesEnabled(false)
+                m.uiSettings.setTiltGesturesEnabled(false)
+                m.uiSettings.setAttributionEnabled(false)
+                m.uiSettings.setLogoEnabled(false)
+                m.addOnCameraIdleListener(idle)
+                m.addOnMapClickListener(clicked)
+                m.moveCamera(camera.position?.let(CameraUpdateFactory::newCameraPosition)
+                    ?: CameraUpdateFactory.newLatLngZoom(ITALY, 5.0))
+                map = m
+            }
+        }
+        onDispose {
+            active = false
+            boundMap?.removeOnCameraIdleListener(idle)
+            boundMap?.removeOnMapClickListener(clicked)
+        }
+    }
+    // Cambiare tema ricarica solo lo stile, senza duplicare listener o spostare la camera.
+    DisposableEffect(map, dark, halo) {
+        var active = true
+        style = null
+        map?.setStyle(Style.Builder().fromUri(if (dark) STYLE_DARK else STYLE_LIGHT)) { loaded ->
+            if (active) {
+                addRouteLayers(loaded, halo.toArgb())
+                addStationLayers(loaded, halo.toArgb(), if (dark) Color.White.toArgb() else Color(0xFF1C1B1F).toArgb())
+                style = loaded
+                map?.let { m ->
+                    val b = m.projection.visibleRegion.latLngBounds
+                    onViewport(BoundingBox(b.latitudeSouth, b.latitudeNorth, b.longitudeWest, b.longitudeEast), m.cameraPosition.zoom)
+                }
+            }
+        }
+        onDispose { active = false }
     }
 
-    // Prima centratura sulla posizione dell'utente, appena disponibile.
+    // Solo il primo fix può centrare automaticamente: un gesto manuale ha sempre precedenza.
     LaunchedEffect(map, state.userLocation) {
         val m = map ?: return@LaunchedEffect
         val user = state.userLocation ?: return@LaunchedEffect
-        if (!centeredOnUser) {
+        if (!camera.positionChosen) {
+            camera.positionChosen = true
             m.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(user.latitude, user.longitude), 13.0))
-            centeredOnUser = true
+            camera.position = m.cameraPosition
         }
     }
-
-    LaunchedEffect(style, state.offers, state.nationalAverage) {
-        val s = style ?: return@LaunchedEffect
-        s.getSourceAs<GeoJsonSource>(SOURCE_STATIONS)?.setGeoJson(
+    LaunchedEffect(style, state.offers, state.nationalAverage, priceColors, neutral) {
+        style?.getSourceAs<GeoJsonSource>(SOURCE_STATIONS)?.setGeoJson(
             toFeatures(state.offers, state.nationalAverage, priceColors.cheaper, priceColors.pricier, neutral),
         )
     }
     LaunchedEffect(style, state.userLocation) {
-        val s = style ?: return@LaunchedEffect
         val user = state.userLocation ?: return@LaunchedEffect
-        s.getSourceAs<GeoJsonSource>(SOURCE_USER)?.setGeoJson(Point.fromLngLat(user.longitude, user.latitude))
+        style?.getSourceAs<GeoJsonSource>(SOURCE_USER)?.setGeoJson(Point.fromLngLat(user.longitude, user.latitude))
     }
-
+    LaunchedEffect(style, state.commutes, selectedRoute, routeColor, otherRouteColor) {
+        style?.getSourceAs<GeoJsonSource>(SOURCE_ROUTES)?.setGeoJson(
+            routeFeatures(state.commutes, selectedRoute, routeColor, otherRouteColor),
+        )
+    }
+    fun focus(commute: Commute) {
+        val m = map ?: return
+        val route = commute.route ?: return
+        camera.positionChosen = true
+        fitMapPoints(m, route.points.map { LatLng(it.latitude, it.longitude) }, fitPadding)
+        camera.position = m.cameraPosition
+    }
     val mapDescription = stringResource(R.string.map_a11y)
     Box(Modifier.fillMaxSize()) {
-        AndroidView(
-            factory = { mapView },
-            modifier = Modifier.fillMaxSize().semantics { contentDescription = mapDescription },
+        AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize().semantics { contentDescription = mapDescription })
+        MapOverlay(state,
+            selected = state.commutes.firstOrNull { it.id == selectedRoute },
+            onRoutes = { showRoutes = true }, onClearRoute = { selectedRoute = null },
+            onFitRoute = ::focus, onOpenCommute = onOpenCommute,
+            onLocate = {
+                scope.launch {
+                    val user = viewModel.locateUser() ?: return@launch
+                    map?.let { m ->
+                        camera.positionChosen = true
+                        m.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(user.latitude, user.longitude), 13.0))
+                        camera.position = m.cameraPosition
+                    }
+                }
+            },
         )
-        MapOverlay(state, onLocate = {
-            viewModel.locateUser()
-            state.userLocation?.let { u -> map?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(u.latitude, u.longitude), 13.0)) }
-        })
     }
-
+    if (showRoutes) ModalBottomSheet(onDismissRequest = { showRoutes = false }, sheetState = rememberFullSheetState()) {
+        LazyColumn(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+            item { Text(stringResource(R.string.map_saved_routes), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(24.dp)) }
+            if (state.commutes.isEmpty()) item {
+                Text(stringResource(R.string.map_routes_empty), modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp))
+            }
+            items(state.commutes, key = { it.id }) { commute ->
+                Surface(onClick = {
+                    showRoutes = false
+                    if (commute.route == null) onOpenCommute(commute.id)
+                    else { selectedRoute = commute.id; focus(commute) }
+                }) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(commuteTitle(commute), style = MaterialTheme.typography.titleMedium)
+                        Text(commute.route?.let { distanceText(it.distanceMeters) + " ? " + durationText(it.durationSeconds) }
+                            ?: stringResource(R.string.commute_not_computed), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                HorizontalDivider()
+            }
+        }
+    }
     selectedStation?.let { id -> StationDetailSheet(id, onDismiss = { selectedStation = null }) }
 }
 
 @Composable
-private fun MapOverlay(state: MapUiState, onLocate: () -> Unit) {
+private fun MapOverlay(
+    state: MapUiState, selected: Commute?, onRoutes: () -> Unit, onClearRoute: () -> Unit,
+    onFitRoute: (Commute) -> Unit, onOpenCommute: (Long) -> Unit, onLocate: () -> Unit,
+) {
     Box(Modifier.fillMaxSize().safeDrawingPadding().padding(12.dp)) {
         Surface(
             shape = MaterialTheme.shapes.large,
@@ -165,16 +274,34 @@ private fun MapOverlay(state: MapUiState, onLocate: () -> Unit) {
             modifier = Modifier.align(Alignment.TopCenter),
         ) {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    fuelAndModeLabel(state.car.fuel, state.car.serviceMode),
-                    style = MaterialTheme.typography.titleSmall,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(fuelAndModeLabel(state.car.fuel, state.car.serviceMode), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    TextButton(onClick = onRoutes) {
+                        Icon(painterResource(R.drawable.ic_route), contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text(stringResource(R.string.tab_routes), Modifier.padding(start = 6.dp))
+                    }
+                }
                 val hint = when {
                     state.dataset == null -> stringResource(R.string.map_no_data)
                     state.zoomTooLow -> stringResource(R.string.map_zoom_in_hint)
                     else -> "▼ " + stringResource(R.string.map_legend_below) + "   ▲ " + stringResource(R.string.map_legend_above)
                 }
                 Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (selected != null) {
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(commuteTitle(selected), style = MaterialTheme.typography.titleMedium, maxLines = 2,
+                            overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        IconButton(onClick = onClearRoute) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.action_close)) }
+                    }
+                    selected.route?.let { route ->
+                        Text(stringResource(R.string.map_route_summary, distanceText(route.distanceMeters), durationText(route.durationSeconds)), style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = { onFitRoute(selected) }, enabled = selected.route != null) { Text(stringResource(R.string.map_fit_route)) }
+                        FilledTonalButton(onClick = { onOpenCommute(selected.id) }) { Text(stringResource(R.string.action_details)) }
+                    }
+                }
             }
         }
 
@@ -199,7 +326,7 @@ private fun MapOverlay(state: MapUiState, onLocate: () -> Unit) {
 
 /** Collega il ciclo di vita della MapView a quello della schermata. */
 @Composable
-private fun MapLifecycle(mapView: MapView) {
+internal fun MapLifecycle(mapView: MapView) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, mapView) {
         var started = false
@@ -283,3 +410,29 @@ private fun toFeatures(offers: List<Offer>, nationalAverage: Int?, cheaper: Colo
             }
         },
     )
+
+private fun addRouteLayers(style: Style, haloColor: Int) {
+    style.addSource(GeoJsonSource(SOURCE_ROUTES, FeatureCollection.fromFeatures(emptyList())))
+    style.addLayer(LineLayer("saved-routes-halo", SOURCE_ROUTES).withProperties(
+        PropertyFactory.lineColor(haloColor), PropertyFactory.lineWidth(10f),
+        PropertyFactory.lineCap("round"), PropertyFactory.lineJoin("round"),
+    ))
+    style.addLayer(LineLayer(LAYER_ROUTES, SOURCE_ROUTES).withProperties(
+        PropertyFactory.lineColor(Expression.toColor(Expression.get("color"))),
+        PropertyFactory.lineWidth(Expression.get("width")),
+        PropertyFactory.lineSortKey(Expression.get("order")),
+        PropertyFactory.lineCap("round"), PropertyFactory.lineJoin("round"),
+    ))
+}
+
+private fun routeFeatures(commutes: List<Commute>, selected: Long?, primary: Color, secondary: Color): FeatureCollection =
+    FeatureCollection.fromFeatures(commutes.mapNotNull { commute ->
+        val points = commute.route?.points?.takeIf { it.size >= 2 } ?: return@mapNotNull null
+        val active = commute.id == selected
+        Feature.fromGeometry(LineString.fromLngLats(points.map { Point.fromLngLat(it.longitude, it.latitude) })).apply {
+            addNumberProperty("commuteId", commute.id)
+            addStringProperty("color", String.format("#%06X", (if (active) primary else secondary).toArgb() and 0xFFFFFF))
+            addNumberProperty("width", if (active) 7f else 4f)
+            addNumberProperty("order", if (active) 1 else 0)
+        }
+    })
