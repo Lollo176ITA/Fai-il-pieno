@@ -31,6 +31,7 @@ import it.faiilpieno.ui.map.MapLifecycle
 import it.faiilpieno.ui.map.MapCameraState
 import it.faiilpieno.ui.map.PersistMapCamera
 import it.faiilpieno.ui.map.fitMapPoints
+import it.faiilpieno.ui.map.mapStyleUrl
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
@@ -69,7 +70,7 @@ internal fun RouteMap(route: Route, camera: MapCameraState, modifier: Modifier =
                 camera.position?.let { m.moveCamera(CameraUpdateFactory.newCameraPosition(it)) }
                 map = m
                 m.uiSettings.setTiltGesturesEnabled(false)
-                m.setStyle(Style.Builder().fromUri(if (dark) "https://tiles.openfreemap.org/styles/dark" else "https://tiles.openfreemap.org/styles/liberty")) { style ->
+                m.setStyle(Style.Builder().fromUri(mapStyleUrl(dark))) { style ->
                     if (active && points.size >= 2) {
                         style.addSource(GeoJsonSource("route-line", LineString.fromLngLats(points)))
                         style.addLayer(LineLayer("route-halo", "route-line").withProperties(lineColor(halo), lineWidth(9f), lineCap("round"), lineJoin("round")))

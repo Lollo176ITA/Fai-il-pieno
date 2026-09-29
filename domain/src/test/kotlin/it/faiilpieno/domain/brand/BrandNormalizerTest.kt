@@ -1,6 +1,8 @@
 package it.faiilpieno.domain.brand
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BrandNormalizerTest {
@@ -45,5 +47,12 @@ class BrandNormalizerTest {
         assertEquals(BrandGroup.ENI, BrandGroup.of(BrandNormalizer.normalize("Agip Eni")))
         assertEquals(BrandGroup.POMPE_BIANCHE, BrandGroup.of("Pompe bianche"))
         assertEquals(BrandGroup.ALTRI, BrandGroup.of("Keropetrol"))
+    }
+
+    @Test
+    fun `filtro marchi vuoto accetta tutto`() {
+        assertTrue(BrandGroup.accepts(emptySet(), "Keropetrol"))
+        assertTrue(BrandGroup.accepts(setOf(BrandGroup.ALTRI), "Keropetrol"))
+        assertFalse(BrandGroup.accepts(setOf(BrandGroup.ENI), "Keropetrol"))
     }
 }

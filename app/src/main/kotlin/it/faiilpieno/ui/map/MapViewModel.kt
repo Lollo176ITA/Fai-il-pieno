@@ -7,6 +7,7 @@ import it.faiilpieno.data.location.LocationProvider
 import it.faiilpieno.data.location.LocationResult
 import it.faiilpieno.data.prefs.PreferencesRepository
 import it.faiilpieno.data.repository.CommuteRepository
+import it.faiilpieno.domain.brand.BrandGroup
 import it.faiilpieno.domain.commute.Commute
 import it.faiilpieno.data.repository.PriceRepository
 import it.faiilpieno.domain.geo.BoundingBox
@@ -50,18 +51,22 @@ class MapViewModel @Inject constructor(
     private val viewport = MutableStateFlow<Viewport?>(null)
     private val userLocation = MutableStateFlow<GeoPoint?>(null)
 
-    private data class AreaQuery(val viewport: Viewport?, val car: CarProfile, val info: DatasetInfo?, val user: GeoPoint?)
+    private data class AreaQuery(val viewport: Viewport?, val car: CarProfile, val info: DatasetInfo?, val user: GeoPoint?, val brands: Set<BrandGroup>)
 
     private data class AreaResult(val offers: List<Offer>, val nationalAverage: Int?, val zoomTooLow: Boolean)
 
-    private val area = combine(viewport.debounce(250), prefs.carProfile, prices.datasetInfo, userLocation) { vp, car, info, user ->
-        AreaQuery(vp, car, info, user)
-    }.mapLatest { (vp, car, info, user) ->
+    private val area = combine(
+        viewport.debounce(250), prefs.carProfile, prices.datasetInfo, userLocation, prefs.searchPreferences,
+    ) { vp, car, info, user, search ->
+        AreaQuery(vp, car, info, user, search.brands)
+    }.mapLatest { (vp, car, info, user, brands) ->
         when {
             info == null || vp == null -> AreaResult(emptyList(), null, zoomTooLow = vp == null || vp.zoom < MIN_ZOOM)
             vp.zoom < MIN_ZOOM -> AreaResult(emptyList(), null, zoomTooLow = true)
             else -> AreaResult(
-                prices.offersInArea(vp.box, car.fuel, car.serviceMode, user, MAX_MARKERS),
+                // Il filtro marchi della scheda Oggi vale anche qui.
+                prices.offersInArea(vp.box, car.fuel, car.serviceMode, user, MAX_MARKERS)
+                    .filter { BrandGroup.accepts(brands, it.station.brand) },
                 prices.nationalAverage(car.fuel, car.serviceMode),
                 zoomTooLow = false,
             )

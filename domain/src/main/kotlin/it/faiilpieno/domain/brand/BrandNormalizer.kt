@@ -79,6 +79,9 @@ enum class BrandGroup(val canonical: String?) {
 
         fun of(brand: String): BrandGroup = byCanonical[brand] ?: ALTRI
 
+        /** Un filtro vuoto accetta tutti i marchi. */
+        fun accepts(filter: Set<BrandGroup>, brand: String): Boolean = filter.isEmpty() || of(brand) in filter
+
         val namedBrands: List<String> = entries.mapNotNull { it.canonical }
     }
 }

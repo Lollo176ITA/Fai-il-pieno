@@ -95,7 +95,7 @@ interface StationDao {
     )
     suspend fun nationalAverage(category: FuelCategory, isSelf: List<Boolean>): Int?
 
-    /** Distributori nel riquadro con un prezzo base aggiornato per il carburante e la modalità scelti. */
+    /** Distributori nel riquadro con un prezzo base aggiornato, dal più economico: con [limit] restano i migliori. */
     @Query(
         """
         SELECT s.*, p.fuelRaw, p.fuelCategory, p.isBase, p.isSelf, p.priceMilli, p.communicatedAt
@@ -105,6 +105,7 @@ interface StationDao {
           AND s.longitude BETWEEN :minLon AND :maxLon
           AND p.fuelCategory = :category AND p.isBase = 1 AND p.isSelf IN (:isSelf)
           AND p.communicatedAt >= :freshSince AND p.isSuspect = 0
+        ORDER BY p.priceMilli
         LIMIT :limit
         """,
     )

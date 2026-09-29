@@ -51,7 +51,7 @@ object NearbyRanker {
         val nearestMeters = offers.minOf { it.distanceMeters }
 
         val ranked = offers
-            .filter { brandFilter.isEmpty() || BrandGroup.of(it.station.brand) in brandFilter }
+            .filter { BrandGroup.accepts(brandFilter, it.station.brand) }
             .map { offer ->
                 val detourKm = 2 * (offer.distanceMeters - nearestMeters) / 1000.0
                 RankedOffer(

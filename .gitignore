@@ -12,3 +12,6 @@ build/
 *.aab
 *.keystore
 *.jks
+
+# Output di compilazione degli IDE (estensione Java di VS Code / Eclipse)
+bin/

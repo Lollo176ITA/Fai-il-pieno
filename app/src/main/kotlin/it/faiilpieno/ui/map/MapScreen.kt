@@ -86,6 +86,9 @@ import org.maplibre.geojson.Point
 
 private const val STYLE_LIGHT = "https://tiles.openfreemap.org/styles/liberty"
 private const val STYLE_DARK = "https://tiles.openfreemap.org/styles/dark"
+
+/** Stile OpenFreeMap adatto al tema, condiviso da tutte le mappe dell'app. */
+internal fun mapStyleUrl(dark: Boolean): String = if (dark) STYLE_DARK else STYLE_LIGHT
 private const val SOURCE_ROUTES = "saved-routes"
 private const val LAYER_ROUTES = "saved-routes-lines"
 private const val SOURCE_STATIONS = "stations"
@@ -171,7 +174,7 @@ fun MapScreen(onOpenCommute: (Long) -> Unit, viewModel: MapViewModel = hiltViewM
     DisposableEffect(map, dark, halo) {
         var active = true
         style = null
-        map?.setStyle(Style.Builder().fromUri(if (dark) STYLE_DARK else STYLE_LIGHT)) { loaded ->
+        map?.setStyle(Style.Builder().fromUri(mapStyleUrl(dark))) { loaded ->
             if (active) {
                 addRouteLayers(loaded, halo.toArgb())
                 addStationLayers(loaded, halo.toArgb(), if (dark) Color.White.toArgb() else Color(0xFF1C1B1F).toArgb())
@@ -249,7 +252,7 @@ fun MapScreen(onOpenCommute: (Long) -> Unit, viewModel: MapViewModel = hiltViewM
                 }) {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(commuteTitle(commute), style = MaterialTheme.typography.titleMedium)
-                        Text(commute.route?.let { distanceText(it.distanceMeters) + " ? " + durationText(it.durationSeconds) }
+                        Text(commute.route?.let { stringResource(R.string.map_route_summary, distanceText(it.distanceMeters), durationText(it.durationSeconds)) }
                             ?: stringResource(R.string.commute_not_computed), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
