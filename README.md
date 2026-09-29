@@ -132,6 +132,15 @@ non distruttiva dalla v3.
 
 ### Mappa
 
+- Ogni distributore ha un'etichetta a pillola con il prezzo e la freccia ▼/▲ rispetto alla media
+  nazionale (stessi colori dei badge di Oggi). Se due etichette si sovrappongono vince la più
+  economica; l'altra resta come puntino toccabile.
+- Da lontano i distributori si raggruppano in una griglia di 96 dp (`MapClusterer`, zoom intero,
+  fino a zoom 13): il gruppo mostra "12 · da 1,729" e al tocco si avvicina di due livelli.
+- La mappa legge una sola volta tutti i distributori del carburante scelto (con il filtro marchi)
+  e poi calcola gruppi ed elenco in memoria a ogni spostamento.
+- In basso, da zoom 10, la striscia "I più economici qui" con i 10 più economici dell'area visibile.
+
 Tile di [OpenFreeMap](https://openfreemap.org/) (gratuite, senza chiave), dati
 © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors. L'attribuzione è nel
 pulsante ⓘ di ogni mappa (con la legenda dei colori) e in Impostazioni → Informazioni e crediti.

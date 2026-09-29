@@ -6,47 +6,39 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.runtime.rememberCoroutineScope
-import it.faiilpieno.domain.commute.Commute
-import it.faiilpieno.ui.routes.commuteTitle
-import it.faiilpieno.ui.routes.durationText
-import it.faiilpieno.ui.format.distanceText
-import it.faiilpieno.ui.components.rememberFullSheetState
-import kotlinx.coroutines.launch
-import org.maplibre.android.style.layers.LineLayer
-import org.maplibre.geojson.LineString
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -54,6 +46,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -62,41 +55,40 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import it.faiilpieno.R
+import it.faiilpieno.domain.commute.Commute
 import it.faiilpieno.domain.geo.BoundingBox
+import it.faiilpieno.domain.map.MapClusterer
 import it.faiilpieno.domain.model.GeoPoint
 import it.faiilpieno.domain.nearby.Offer
-import it.faiilpieno.domain.pricing.deltaCents
-import it.faiilpieno.ui.format.Fmt
+import it.faiilpieno.ui.components.rememberFullSheetState
+import it.faiilpieno.ui.format.distanceText
 import it.faiilpieno.ui.format.fuelAndModeLabel
+import it.faiilpieno.ui.routes.commuteTitle
+import it.faiilpieno.ui.routes.durationText
 import it.faiilpieno.ui.station.StationDetailSheet
 import it.faiilpieno.ui.theme.LocalPriceColors
+import kotlinx.coroutines.launch
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
-import org.maplibre.android.style.expressions.Expression
-import org.maplibre.android.style.layers.CircleLayer
-import org.maplibre.android.style.layers.PropertyFactory
-import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
-import org.maplibre.geojson.Feature
-import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
+import java.util.Locale
+import kotlin.math.floor
+import kotlin.math.min
 
 private const val STYLE_LIGHT = "https://tiles.openfreemap.org/styles/liberty"
 private const val STYLE_DARK = "https://tiles.openfreemap.org/styles/dark"
+private val ITALY = LatLng(42.5, 12.5)
+
+/** Zoom per la posizione dell'utente e per un distributore scelto dall'elenco. */
+private const val USER_ZOOM = 13.0
+private const val DETAIL_ZOOM = 14.0
 
 /** Stile OpenFreeMap adatto al tema, condiviso da tutte le mappe dell'app. */
 internal fun mapStyleUrl(dark: Boolean): String = if (dark) STYLE_DARK else STYLE_LIGHT
-private const val SOURCE_ROUTES = "saved-routes"
-private const val LAYER_ROUTES = "saved-routes-lines"
-private const val SOURCE_STATIONS = "stations"
-private const val SOURCE_USER = "user"
-private const val LAYER_CIRCLES = "stations-circles"
-private const val LAYER_LABELS = "stations-labels"
-private const val LAYER_USER = "user-dot"
-private val ITALY = LatLng(42.5, 12.5)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,18 +97,37 @@ fun MapScreen(onOpenCommute: (Long) -> Unit, viewModel: MapViewModel = hiltViewM
     val context = LocalContext.current
     val dark = isSystemInDarkTheme()
     val priceColors = LocalPriceColors.current
-    val neutral = MaterialTheme.colorScheme.secondary
-    val halo = MaterialTheme.colorScheme.surface
-    val routeColor = MaterialTheme.colorScheme.primary
-    val otherRouteColor = MaterialTheme.colorScheme.tertiary
+    val scheme = MaterialTheme.colorScheme
+    val markerStyle = remember(priceColors, scheme) {
+        MarkerStyle(
+            tones = mapOf(
+                PillTone.CHEAPER to PillColors(priceColors.cheaperContainer, priceColors.onCheaperContainer),
+                PillTone.PRICIER to PillColors(priceColors.pricierContainer, priceColors.onPricierContainer),
+                PillTone.NEUTRAL to PillColors(priceColors.neutralContainer, priceColors.onNeutralContainer),
+                PillTone.CLUSTER to PillColors(scheme.inverseSurface, scheme.inverseOnSurface),
+            ),
+            border = scheme.outline,
+            selectedBorder = scheme.onSurface,
+            dot = scheme.onSurface,
+            dotStroke = scheme.surface,
+        )
+    }
+    val halo = scheme.surface
+    val routeColor = scheme.primary
+    val otherRouteColor = scheme.tertiary
+    val clusterTemplate = stringResource(R.string.map_cluster_label)
     val scope = rememberCoroutineScope()
-    val touchPx = with(LocalDensity.current) { 24.dp.toPx() }
-    val fitPadding = with(LocalDensity.current) { 64.dp.roundToPx() }
+    val density = LocalDensity.current
+    val touchPx = with(density) { 24.dp.toPx() }
+    val fitPadding = with(density) { 64.dp.roundToPx() }
 
     var selectedStation by rememberSaveable { mutableStateOf<Long?>(null) }
+    // Resta evidenziato anche dopo aver chiuso il dettaglio, finché non si tocca altrove.
+    var highlighted by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedRoute by rememberSaveable { mutableStateOf<Long?>(null) }
     var showRoutes by rememberSaveable { mutableStateOf(false) }
     var showInfo by rememberSaveable { mutableStateOf(false) }
+    val stripState = rememberLazyListState()
     val camera = rememberMapCameraState()
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var style by remember { mutableStateOf<Style?>(null) }
@@ -124,7 +135,19 @@ fun MapScreen(onOpenCommute: (Long) -> Unit, viewModel: MapViewModel = hiltViewM
     MapLifecycle(mapView)
     PersistMapCamera(map, camera)
 
+    fun moveTo(point: GeoPoint, minZoom: Double) {
+        val m = map ?: return
+        camera.positionChosen = true
+        m.easeCamera(CameraUpdateFactory.newLatLngZoom(LatLng(point.latitude, point.longitude), maxOf(m.cameraPosition.zoom, minZoom)))
+    }
+
     val onViewport by rememberUpdatedState(viewModel::onViewportChanged)
+    val onStationTapped by rememberUpdatedState { id: Long ->
+        selectedStation = id
+        highlighted = id
+        val index = state.cheapest.indexOfFirst { it.station.id == id }
+        if (index >= 0) scope.launch { stripState.animateScrollToItem(index) }
+    }
     DisposableEffect(mapView) {
         var active = true
         var boundMap: MapLibreMap? = null
@@ -136,19 +159,29 @@ fun MapScreen(onOpenCommute: (Long) -> Unit, viewModel: MapViewModel = hiltViewM
             }
         }
         val clicked = MapLibreMap.OnMapClickListener { latLng ->
-            val m = boundMap
-            if (m == null) false else {
-                val p = m.projection.toScreenLocation(latLng)
-                val hit = RectF(p.x - touchPx, p.y - touchPx, p.x + touchPx, p.y + touchPx)
-                val station = m.queryRenderedFeatures(hit, LAYER_CIRCLES, LAYER_LABELS)
-                    .firstNotNullOfOrNull { it.getNumberProperty("id")?.toLong() }
-                val route = m.queryRenderedFeatures(hit, LAYER_ROUTES)
-                    .firstNotNullOfOrNull { it.getNumberProperty("commuteId")?.toLong() }
-                when {
-                    station != null -> { selectedStation = station; true }
-                    route != null -> { selectedRoute = route; true }
-                    else -> false
+            val m = boundMap ?: return@OnMapClickListener false
+            val p = m.projection.toScreenLocation(latLng)
+            val hit = RectF(p.x - touchPx, p.y - touchPx, p.x + touchPx, p.y + touchPx)
+            // Prima le etichette (disegnate sopra), poi i puntini dei distributori coperti.
+            val marker = m.queryRenderedFeatures(hit, LAYER_PILLS).firstOrNull()
+                ?: m.queryRenderedFeatures(hit, LAYER_DOTS).firstOrNull()
+            val route = m.queryRenderedFeatures(hit, LAYER_ROUTES)
+                .firstNotNullOfOrNull { it.getNumberProperty("commuteId")?.toLong() }
+            val center = marker?.geometry() as? Point
+            when {
+                marker?.getStringProperty("kind") == KIND_CLUSTER && center != null -> {
+                    // Ogni tocco avvicina di due livelli, fino a mostrare i singoli distributori.
+                    camera.positionChosen = true
+                    val zoom = min(floor(m.cameraPosition.zoom) + 2, MapClusterer.CLUSTER_BELOW_ZOOM)
+                    m.easeCamera(CameraUpdateFactory.newLatLngZoom(LatLng(center.latitude(), center.longitude()), zoom))
+                    true
                 }
+                marker != null -> {
+                    marker.getNumberProperty("id")?.toLong()?.let { onStationTapped(it) }
+                    true
+                }
+                route != null -> { selectedRoute = route; true }
+                else -> { highlighted = null; false }
             }
         }
         mapView.getMapAsync { m ->
@@ -172,13 +205,14 @@ fun MapScreen(onOpenCommute: (Long) -> Unit, viewModel: MapViewModel = hiltViewM
         }
     }
     // Cambiare tema ricarica solo lo stile, senza duplicare listener o spostare la camera.
-    DisposableEffect(map, dark, halo) {
+    DisposableEffect(map, dark, markerStyle, density) {
         var active = true
         style = null
         map?.setStyle(Style.Builder().fromUri(mapStyleUrl(dark))) { loaded ->
             if (active) {
                 addRouteLayers(loaded, halo.toArgb())
-                addStationLayers(loaded, halo.toArgb(), if (dark) Color.White.toArgb() else Color(0xFF1C1B1F).toArgb())
+                addUserLayer(loaded)
+                addMarkerLayers(loaded, markerStyle, density.density, density.fontScale)
                 style = loaded
                 map?.let { m ->
                     val b = m.projection.visibleRegion.latLngBounds
@@ -195,18 +229,20 @@ fun MapScreen(onOpenCommute: (Long) -> Unit, viewModel: MapViewModel = hiltViewM
         val user = state.userLocation ?: return@LaunchedEffect
         if (!camera.positionChosen) {
             camera.positionChosen = true
-            m.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(user.latitude, user.longitude), 13.0))
+            m.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(user.latitude, user.longitude), USER_ZOOM))
             camera.position = m.cameraPosition
         }
     }
-    LaunchedEffect(style, state.offers, state.nationalAverage, priceColors, neutral) {
-        style?.getSourceAs<GeoJsonSource>(SOURCE_STATIONS)?.setGeoJson(
-            toFeatures(state.offers, state.nationalAverage, priceColors.cheaper, priceColors.pricier, neutral),
+    LaunchedEffect(style, state.markers, state.nationalAverage, highlighted, markerStyle) {
+        style?.getSourceAs<GeoJsonSource>(SOURCE_MARKERS)?.setGeoJson(
+            markerFeatures(state.markers, state.nationalAverage, highlighted, markerStyle) { count, price ->
+                String.format(Locale.ITALY, clusterTemplate, count, price)
+            },
         )
     }
     LaunchedEffect(style, state.userLocation) {
         val user = state.userLocation ?: return@LaunchedEffect
-        style?.getSourceAs<GeoJsonSource>(SOURCE_USER)?.setGeoJson(Point.fromLngLat(user.longitude, user.latitude))
+        style?.setUserLocation(user.longitude, user.latitude)
     }
     LaunchedEffect(style, state.commutes, selectedRoute, routeColor, otherRouteColor) {
         style?.getSourceAs<GeoJsonSource>(SOURCE_ROUTES)?.setGeoJson(
@@ -223,17 +259,27 @@ fun MapScreen(onOpenCommute: (Long) -> Unit, viewModel: MapViewModel = hiltViewM
     val mapDescription = stringResource(R.string.map_a11y)
     Box(Modifier.fillMaxSize()) {
         AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize().semantics { contentDescription = mapDescription })
-        MapOverlay(state,
+        MapOverlay(
+            state,
             selected = state.commutes.firstOrNull { it.id == selectedRoute },
-            onRoutes = { showRoutes = true }, onClearRoute = { selectedRoute = null },
-            onFitRoute = ::focus, onOpenCommute = onOpenCommute, onInfo = { showInfo = true },
+            highlighted = highlighted,
+            stripState = stripState,
+            onRoutes = { showRoutes = true },
+            onClearRoute = { selectedRoute = null },
+            onFitRoute = ::focus,
+            onOpenCommute = onOpenCommute,
+            onInfo = { showInfo = true },
+            onSelectOffer = { offer ->
+                selectedStation = offer.station.id
+                highlighted = offer.station.id
+                offer.station.location?.let { moveTo(it, DETAIL_ZOOM) }
+            },
             onLocate = {
                 scope.launch {
                     val user = viewModel.locateUser() ?: return@launch
                     map?.let { m ->
                         camera.positionChosen = true
-                        m.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(user.latitude, user.longitude), 13.0))
-                        camera.position = m.cameraPosition
+                        m.easeCamera(CameraUpdateFactory.newLatLngZoom(LatLng(user.latitude, user.longitude), USER_ZOOM))
                     }
                 }
             },
@@ -267,20 +313,33 @@ fun MapScreen(onOpenCommute: (Long) -> Unit, viewModel: MapViewModel = hiltViewM
 
 @Composable
 private fun MapOverlay(
-    state: MapUiState, selected: Commute?, onRoutes: () -> Unit, onClearRoute: () -> Unit,
-    onFitRoute: (Commute) -> Unit, onOpenCommute: (Long) -> Unit, onLocate: () -> Unit, onInfo: () -> Unit,
+    state: MapUiState,
+    selected: Commute?,
+    highlighted: Long?,
+    stripState: LazyListState,
+    onRoutes: () -> Unit,
+    onClearRoute: () -> Unit,
+    onFitRoute: (Commute) -> Unit,
+    onOpenCommute: (Long) -> Unit,
+    onLocate: () -> Unit,
+    onInfo: () -> Unit,
+    onSelectOffer: (Offer) -> Unit,
 ) {
-    Box(Modifier.fillMaxSize().safeDrawingPadding().padding(12.dp)) {
+    Box(Modifier.fillMaxSize().safeDrawingPadding()) {
         Surface(
             shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             tonalElevation = 3.dp,
             shadowElevation = 3.dp,
-            modifier = Modifier.align(Alignment.TopCenter),
+            modifier = Modifier.align(Alignment.TopCenter).padding(12.dp),
         ) {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(fuelAndModeLabel(state.car.fuel, state.car.serviceMode), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    Text(
+                        fuelAndModeLabel(state.car.fuel, state.car.serviceMode),
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
                     TextButton(onClick = onRoutes) {
                         Icon(painterResource(R.drawable.ic_route), contentDescription = null, modifier = Modifier.size(18.dp))
                         Text(stringResource(R.string.tab_routes), Modifier.padding(start = 6.dp))
@@ -288,21 +347,30 @@ private fun MapOverlay(
                 }
                 val hint = when {
                     state.dataset == null -> stringResource(R.string.map_no_data)
-                    state.zoomTooLow -> stringResource(R.string.map_zoom_in_hint)
+                    state.loading -> stringResource(R.string.map_loading)
+                    state.emptyArea -> stringResource(R.string.map_empty_area)
+                    state.cheapest.isEmpty() && state.markers.isNotEmpty() -> stringResource(R.string.map_zoom_in_hint)
                     else -> null
                 }
-                if (hint != null) Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (hint != null) {
+                    Text(
+                        hint,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(end = 8.dp, bottom = 6.dp),
+                    )
+                }
                 if (selected != null) {
-                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(Modifier.padding(vertical = 4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(commuteTitle(selected), style = MaterialTheme.typography.titleMedium, maxLines = 2,
-                            overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                         IconButton(onClick = onClearRoute) { Icon(painterResource(R.drawable.ic_close), stringResource(R.string.action_close)) }
                     }
                     selected.route?.let { route ->
                         Text(stringResource(R.string.map_route_summary, distanceText(route.distanceMeters), durationText(route.durationSeconds)), style = MaterialTheme.typography.bodyMedium)
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 4.dp)) {
                         TextButton(onClick = { onFitRoute(selected) }, enabled = selected.route != null) { Text(stringResource(R.string.map_fit_route)) }
                         FilledTonalButton(onClick = { onOpenCommute(selected.id) }) { Text(stringResource(R.string.action_details)) }
                     }
@@ -310,11 +378,21 @@ private fun MapOverlay(
             }
         }
 
-        FloatingActionButton(onClick = onLocate, modifier = Modifier.align(Alignment.BottomEnd)) {
-            Icon(painterResource(R.drawable.ic_my_location), contentDescription = stringResource(R.string.map_my_location))
+        Column(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                MapInfoButton(onClick = onInfo)
+                Spacer(Modifier.weight(1f))
+                FloatingActionButton(onClick = onLocate) {
+                    Icon(painterResource(R.drawable.ic_my_location), contentDescription = stringResource(R.string.map_my_location))
+                }
+            }
+            if (state.cheapest.isNotEmpty()) {
+                CheapestStrip(state.cheapest, state.nationalAverage, state.userLocation, highlighted, stripState, onSelect = onSelectOffer)
+            }
         }
-
-        MapInfoButton(onClick = onInfo, modifier = Modifier.align(Alignment.BottomStart))
     }
 }
 
@@ -343,90 +421,3 @@ internal fun MapLifecycle(mapView: MapView) {
         }
     }
 }
-
-private fun addStationLayers(style: Style, haloColor: Int, textColor: Int) {
-    style.addSource(GeoJsonSource(SOURCE_STATIONS, FeatureCollection.fromFeatures(emptyList())))
-    style.addSource(GeoJsonSource(SOURCE_USER, FeatureCollection.fromFeatures(emptyList())))
-    style.addLayer(
-        CircleLayer(LAYER_CIRCLES, SOURCE_STATIONS).withProperties(
-            PropertyFactory.circleRadius(7f),
-            PropertyFactory.circleColor(Expression.toColor(Expression.get("color"))),
-            PropertyFactory.circleStrokeColor(haloColor),
-            PropertyFactory.circleStrokeWidth(2f),
-            // Chiave più alta = disegnato sopra: i più economici restano visibili.
-            PropertyFactory.circleSortKey(Expression.get("drawOrder")),
-        ),
-    )
-    style.addLayer(
-        SymbolLayer(LAYER_LABELS, SOURCE_STATIONS).withProperties(
-            PropertyFactory.textField(Expression.get("label")),
-            PropertyFactory.textFont(arrayOf("Noto Sans Bold")),
-            PropertyFactory.textSize(13f),
-            PropertyFactory.textColor(textColor),
-            PropertyFactory.textHaloColor(haloColor),
-            PropertyFactory.textHaloWidth(2f),
-            PropertyFactory.textAnchor("bottom"),
-            PropertyFactory.textOffset(arrayOf(0f, -0.7f)),
-            // Chiave più bassa = piazzata per prima: in caso di collisione vince il prezzo più basso.
-            PropertyFactory.symbolSortKey(Expression.get("placement")),
-        ),
-    )
-    style.addLayer(
-        CircleLayer(LAYER_USER, SOURCE_USER).withProperties(
-            PropertyFactory.circleRadius(8f),
-            PropertyFactory.circleColor(Color(0xFF1A73E8).toArgb()),
-            PropertyFactory.circleStrokeColor(Color.White.toArgb()),
-            PropertyFactory.circleStrokeWidth(3f),
-        ),
-    )
-}
-
-/**
- * Etichetta "▼ 1,799" / "▲ 1,899": la freccia porta l'informazione sopra/sotto media
- * anche per chi non distingue i colori.
- */
-private fun toFeatures(offers: List<Offer>, nationalAverage: Int?, cheaper: Color, pricier: Color, neutral: Color): FeatureCollection =
-    FeatureCollection.fromFeatures(
-        offers.mapNotNull { offer ->
-            val location: GeoPoint = offer.station.location ?: return@mapNotNull null
-            val delta = nationalAverage?.let { deltaCents(offer.price.priceMilli, it) } ?: 0
-            val (arrow, color) = when {
-                delta <= -1 -> "▼ " to cheaper
-                delta >= 1 -> "▲ " to pricier
-                else -> "" to neutral
-            }
-            Feature.fromGeometry(Point.fromLngLat(location.longitude, location.latitude)).apply {
-                addNumberProperty("id", offer.station.id)
-                addStringProperty("label", arrow + Fmt.priceNumber(offer.price.priceMilli))
-                addStringProperty("color", String.format("#%06X", color.toArgb() and 0xFFFFFF))
-                addNumberProperty("drawOrder", -offer.price.priceMilli)
-                addNumberProperty("placement", offer.price.priceMilli)
-            }
-        },
-    )
-
-private fun addRouteLayers(style: Style, haloColor: Int) {
-    style.addSource(GeoJsonSource(SOURCE_ROUTES, FeatureCollection.fromFeatures(emptyList())))
-    style.addLayer(LineLayer("saved-routes-halo", SOURCE_ROUTES).withProperties(
-        PropertyFactory.lineColor(haloColor), PropertyFactory.lineWidth(10f),
-        PropertyFactory.lineCap("round"), PropertyFactory.lineJoin("round"),
-    ))
-    style.addLayer(LineLayer(LAYER_ROUTES, SOURCE_ROUTES).withProperties(
-        PropertyFactory.lineColor(Expression.toColor(Expression.get("color"))),
-        PropertyFactory.lineWidth(Expression.get("width")),
-        PropertyFactory.lineSortKey(Expression.get("order")),
-        PropertyFactory.lineCap("round"), PropertyFactory.lineJoin("round"),
-    ))
-}
-
-private fun routeFeatures(commutes: List<Commute>, selected: Long?, primary: Color, secondary: Color): FeatureCollection =
-    FeatureCollection.fromFeatures(commutes.mapNotNull { commute ->
-        val points = commute.route?.points?.takeIf { it.size >= 2 } ?: return@mapNotNull null
-        val active = commute.id == selected
-        Feature.fromGeometry(LineString.fromLngLats(points.map { Point.fromLngLat(it.longitude, it.latitude) })).apply {
-            addNumberProperty("commuteId", commute.id)
-            addStringProperty("color", String.format("#%06X", (if (active) primary else secondary).toArgb() and 0xFFFFFF))
-            addNumberProperty("width", if (active) 7f else 4f)
-            addNumberProperty("order", if (active) 1 else 0)
-        }
-    })

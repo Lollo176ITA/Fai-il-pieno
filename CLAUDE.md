@@ -80,6 +80,8 @@ kotlinx.serialization, MapLibre + OpenFreeMap. AGP 9 con Kotlin integrato (nient
 - Attribuzioni (scelta dell'utente): crediti completi (MIMIT, OSM, OpenFreeMap, ORS, MapLibre) solo in
   Impostazioni → Informazioni e crediti; su ogni mappa un pulsante ⓘ con legenda e crediti OSM (la
   licenza ODbL li vuole raggiungibili dalla mappa). La data dei prezzi resta nell'intestazione di Oggi.
+- Mappa: etichette a pillola (▼/▲ e colori di `PriceColors`), gruppi a griglia calcolati in
+  `:domain` (`MapClusterer`), striscia "I più economici qui" da zoom 10. Stesso filtro marchi di Oggi.
 - Import MIMIT sempre nazionale (scelta dell'utente): i file esistono solo per tutta Italia, filtrare
   per regione risparmierebbe solo spazio e lascerebbe vuota Oggi fuori zona.
 - Notifica: `ReserveCheckWorker` ogni giorno alle 18:30, se la riserva è entro 2 giorni (stima di

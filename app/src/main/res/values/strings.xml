@@ -124,7 +124,12 @@
     <string name="detail_no_prices">Nessun prezzo comunicato.</string>
 
     <!-- Mappa -->
-    <string name="map_zoom_in_hint">Avvicinati per vedere i prezzi</string>
+    <string name="map_zoom_in_hint">Tocca un gruppo per avvicinarti e vedere i singoli distributori.</string>
+    <string name="map_loading">Carico i distributori…</string>
+    <string name="map_empty_area">Qui non ci sono distributori con prezzi aggiornati.</string>
+    <string name="map_cluster_label">%1$d · da %2$s</string>
+    <string name="map_cheapest_title">I più economici qui</string>
+    <string name="map_card_a11y">%1$s, %2$s, %3$s</string>
     <string name="map_my_location">Vai alla mia posizione</string>
     <string name="map_a11y">Mappa dei distributori con i prezzi. L\'elenco completo e accessibile è nella scheda Oggi.</string>
     <string name="map_no_data">Nessun dato scaricato: apri la scheda Oggi.</string>
@@ -133,6 +138,9 @@
     <string name="map_legend_pricier">Sopra la media nazionale</string>
     <string name="map_legend_neutral">In linea con la media</string>
     <string name="map_legend_sample" translatable="false">1,799</string>
+    <string name="map_legend_cluster_sample" translatable="false">12 · da 1,799</string>
+    <string name="map_legend_cluster">Gruppo di distributori vicini, con il prezzo del più economico. Toccalo per avvicinarti.</string>
+    <string name="map_legend_dot">Distributore coperto da uno più economico: avvicinati o toccalo.</string>
     <string name="map_info_credits">Dati della mappa © OpenStreetMap contributors · mappe OpenFreeMap e OpenMapTiles.</string>
     <string name="map_info_osm_link">Licenza dei dati OpenStreetMap</string>
     <string name="map_info_more">Tutti i crediti sono in Impostazioni → Informazioni e crediti.</string>

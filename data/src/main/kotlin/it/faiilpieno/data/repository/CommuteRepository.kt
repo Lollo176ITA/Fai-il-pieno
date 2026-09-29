@@ -175,7 +175,7 @@ class CommuteRepository @Inject constructor(
     /** Distributori entro [bufferMeters] dal percorso, con un prezzo aggiornato del carburante dell'auto. */
     suspend fun offersAlong(route: Route, car: CarProfile, bufferMeters: Double): List<RouteOffer> {
         val corridor = withContext(Dispatchers.Default) { RouteCorridor(route.points, bufferMeters) }
-        val candidates = prices.offersInArea(corridor.boundingBox, car.fuel, car.serviceMode, userLocation = null, limit = Int.MAX_VALUE)
+        val candidates = prices.offersInArea(corridor.boundingBox, car.fuel, car.serviceMode)
         return withContext(Dispatchers.Default) {
             candidates.mapNotNull { offer ->
                 val position = offer.station.location?.let(corridor::locate) ?: return@mapNotNull null

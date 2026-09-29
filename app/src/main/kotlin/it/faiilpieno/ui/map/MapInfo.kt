@@ -1,6 +1,13 @@
 package it.faiilpieno.ui.map
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,6 +45,9 @@ import it.faiilpieno.ui.format.Fmt
 import it.faiilpieno.ui.theme.LocalPriceColors
 import it.faiilpieno.ui.theme.tabular
 
+/** Colonna degli esempi della legenda: i testi accanto restano allineati. */
+private val LEGEND_SAMPLE_WIDTH = 128.dp
+
 internal const val OSM_COPYRIGHT_URL = "https://www.openstreetmap.org/copyright"
 
 /**
@@ -71,6 +81,11 @@ internal fun MapInfoSheet(dataset: DatasetInfo?, showLegend: Boolean, onDismiss:
                 LegendRow("▼", colors.cheaperContainer, colors.onCheaperContainer, stringResource(R.string.map_legend_cheaper))
                 LegendRow("▲", colors.pricierContainer, colors.onPricierContainer, stringResource(R.string.map_legend_pricier))
                 LegendRow("", colors.neutralContainer, colors.onNeutralContainer, stringResource(R.string.map_legend_neutral))
+                LegendRow(
+                    "", MaterialTheme.colorScheme.inverseSurface, MaterialTheme.colorScheme.inverseOnSurface,
+                    stringResource(R.string.map_legend_cluster), sample = stringResource(R.string.map_legend_cluster_sample),
+                )
+                LegendDotRow(stringResource(R.string.map_legend_dot))
                 HorizontalDivider()
             }
             if (dataset != null) {
@@ -91,19 +106,40 @@ internal fun MapInfoSheet(dataset: DatasetInfo?, showLegend: Boolean, onDismiss:
 }
 
 @Composable
-private fun LegendRow(arrow: String, container: Color, content: Color, text: String) {
+private fun LegendRow(arrow: String, container: Color, content: Color, text: String, sample: String = stringResource(R.string.map_legend_sample)) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = text },
     ) {
-        Surface(color = container, contentColor = content, shape = RoundedCornerShape(50)) {
-            Text(
-                listOf(arrow, stringResource(R.string.map_legend_sample)).filter { it.isNotEmpty() }.joinToString(" "),
-                style = MaterialTheme.typography.labelLarge.tabular(),
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+        Box(Modifier.widthIn(min = LEGEND_SAMPLE_WIDTH)) {
+            Surface(color = container, contentColor = content, shape = RoundedCornerShape(50)) {
+                Text(
+                    listOf(arrow, sample).filter { it.isNotEmpty() }.joinToString(" "),
+                    style = MaterialTheme.typography.labelLarge.tabular(),
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                )
+            }
+        }
+        Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun LegendDotRow(text: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = text },
+    ) {
+        Box(Modifier.width(LEGEND_SAMPLE_WIDTH).padding(start = 12.dp)) {
+            Box(
+                Modifier
+                    .size(10.dp)
+                    .background(MaterialTheme.colorScheme.onSurface, CircleShape)
+                    .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape),
             )
         }
-        Text(text, style = MaterialTheme.typography.bodyLarge)
+        Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
     }
 }

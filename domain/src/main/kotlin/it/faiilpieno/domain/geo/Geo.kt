@@ -29,6 +29,13 @@ data class BoundingBox(
     operator fun contains(p: GeoPoint): Boolean =
         p.latitude in minLatitude..maxLatitude && p.longitude in minLongitude..maxLongitude
 
+    /** Lo stesso rettangolo allargato su ogni lato di [fraction] volte la sua ampiezza. */
+    fun expandedBy(fraction: Double): BoundingBox {
+        val dLat = (maxLatitude - minLatitude) * fraction
+        val dLon = (maxLongitude - minLongitude) * fraction
+        return BoundingBox(minLatitude - dLat, maxLatitude + dLat, minLongitude - dLon, maxLongitude + dLon)
+    }
+
     companion object {
         private const val METERS_PER_DEGREE_LAT = 111_320.0
 

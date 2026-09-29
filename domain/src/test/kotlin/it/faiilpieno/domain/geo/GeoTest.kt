@@ -40,6 +40,12 @@ class GeoTest {
     }
 
     @Test
+    fun `riquadro allargato su ogni lato`() {
+        val box = BoundingBox(40.0, 42.0, 12.0, 13.0).expandedBy(0.5)
+        assertEquals(BoundingBox(39.0, 43.0, 11.5, 13.5), box)
+    }
+
+    @Test
     fun `coordinate valide solo in Italia`() {
         assertTrue(ItalyBounds.isValid(41.89, 12.49))
         assertTrue(ItalyBounds.isValid(35.50, 12.60)) // Lampedusa

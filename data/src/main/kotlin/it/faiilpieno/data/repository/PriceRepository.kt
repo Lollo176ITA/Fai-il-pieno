@@ -92,23 +92,20 @@ class PriceRepository @Inject constructor(
         return NearbySearch(offers, SEARCH_RADII.last())
     }
 
-    /** Distributori nell'area visibile della mappa. */
-    suspend fun offersInArea(
-        box: BoundingBox,
-        category: FuelCategory,
-        mode: ServiceMode,
-        userLocation: GeoPoint?,
-        limit: Int,
-    ): List<Offer> {
+    /**
+     * Tutti i distributori con un prezzo aggiornato per la mappa (circa 20.000 per la benzina self).
+     * La distanza non serve e resta NaN: la mappa la calcola solo per quelli che mostra in elenco.
+     */
+    suspend fun allOffers(category: FuelCategory, mode: ServiceMode): List<Offer> =
+        offersInArea(BoundingBox(-90.0, 90.0, -180.0, 180.0), category, mode)
+
+    /** Distributori nel riquadro [box], senza distanza (NaN). */
+    suspend fun offersInArea(box: BoundingBox, category: FuelCategory, mode: ServiceMode): List<Offer> {
         val freshSince = freshSince() ?: return emptyList()
         return dao.offersInArea(
             box.minLatitude, box.maxLatitude, box.minLongitude, box.maxLongitude,
-            category, modesFor(category, mode), freshSince, limit,
-        ).onePerStation(mode).map { row ->
-            val station = row.station.toDomain()
-            val distance = userLocation?.let { u -> station.location?.let { Haversine.distanceMeters(u, it) } }
-            Offer(station, row.price(), distance ?: Double.NaN)
-        }
+            category, modesFor(category, mode), freshSince, Int.MAX_VALUE,
+        ).onePerStation(mode).map { row -> Offer(row.station.toDomain(), row.price(), Double.NaN) }
     }
 
     suspend fun stationDetail(id: Long): StationDetail? {
