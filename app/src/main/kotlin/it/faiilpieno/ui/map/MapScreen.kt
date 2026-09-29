@@ -62,7 +62,6 @@ import it.faiilpieno.domain.model.GeoPoint
 import it.faiilpieno.domain.nearby.Offer
 import it.faiilpieno.ui.components.rememberFullSheetState
 import it.faiilpieno.ui.format.distanceText
-import it.faiilpieno.ui.format.fuelAndModeLabel
 import it.faiilpieno.ui.routes.commuteTitle
 import it.faiilpieno.ui.routes.durationText
 import it.faiilpieno.ui.station.StationDetailSheet
@@ -333,17 +332,10 @@ private fun MapOverlay(
             shadowElevation = 3.dp,
             modifier = Modifier.align(Alignment.TopCenter).padding(12.dp),
         ) {
-            Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        fuelAndModeLabel(state.car.fuel, state.car.serviceMode),
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    TextButton(onClick = onRoutes) {
-                        Icon(painterResource(R.drawable.ic_route), contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text(stringResource(R.string.tab_routes), Modifier.padding(start = 6.dp))
-                    }
+            Column(Modifier.padding(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 4.dp)) {
+                TextButton(onClick = onRoutes) {
+                    Icon(painterResource(R.drawable.ic_route), contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.map_saved_routes), Modifier.padding(start = 6.dp))
                 }
                 val hint = when {
                     state.dataset == null -> stringResource(R.string.map_no_data)
@@ -357,7 +349,7 @@ private fun MapOverlay(
                         hint,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(end = 8.dp, bottom = 6.dp),
+                        modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 6.dp),
                     )
                 }
                 if (selected != null) {

@@ -51,7 +51,6 @@
     <string name="brand_altri">Altri marchi</string>
 
     <!-- Oggi -->
-    <string name="today_subtitle">%1$s · %2$s</string>
     <string name="hero_label">Ti conviene</string>
     <string name="hero_label_nearest">Il più vicino</string>
     <string name="hero_saving">Risparmi %1$s</string>
@@ -63,8 +62,8 @@
     <string name="action_details">Dettagli</string>
     <string name="list_title">Distributori vicini</string>
     <plurals name="list_subtitle">
-        <item quantity="one">%1$d distributore entro %2$s · %3$s</item>
-        <item quantity="other">%1$d distributori entro %2$s · %3$s</item>
+        <item quantity="one">%1$d distributore entro %2$s</item>
+        <item quantity="other">%1$d distributori entro %2$s</item>
     </plurals>
     <string name="station_row_a11y">%1$s, %2$s, a %3$s, %4$s</string>
     <string name="hero_a11y">Consigliato: %1$s a %2$s, prezzo %3$s, %4$s</string>
@@ -101,7 +100,7 @@
 
     <!-- Fonte dati (licenza IODL 2.0) -->
     <string name="source_attribution">Fonte: Ministero delle Imprese e del Made in Italy</string>
-    <string name="today_header">%1$s · prezzi del %2$s</string>
+    <string name="today_header">Prezzi del %1$s</string>
     <string name="credits_title">Informazioni e crediti</string>
     <string name="credits_prices_title">Prezzi dei carburanti</string>
     <string name="credits_prices_text">Ministero delle Imprese e del Made in Italy, licenza IODL 2.0. Prezzi comunicati dai gestori alle 8 del mattino.</string>
@@ -259,8 +258,8 @@
     <string name="commute_buffer">Distributori entro</string>
     <string name="commute_stations_title">Distributori lungo il percorso</string>
     <plurals name="commute_stations_subtitle">
-        <item quantity="one">%1$d distributore entro %2$s · %3$s</item>
-        <item quantity="other">%1$d distributori entro %2$s · %3$s</item>
+        <item quantity="one">%1$d distributore entro %2$s</item>
+        <item quantity="other">%1$d distributori entro %2$s</item>
     </plurals>
     <string name="commute_sort_price">Prezzo</string>
     <string name="commute_sort_along">Lungo la strada</string>

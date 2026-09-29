@@ -90,11 +90,6 @@ fun fuelLabel(category: FuelCategory): String = stringResource(
 fun modeLabel(mode: ServiceMode): String =
     stringResource(if (mode == ServiceMode.SELF) R.string.mode_self else R.string.mode_servito)
 
-/** "Gasolio · Self"; per GPL e metano, dove la modalità non conta, solo il carburante. */
-@Composable
-fun fuelAndModeLabel(fuel: FuelCategory, mode: ServiceMode): String =
-    if (fuel.hasServiceModes) stringResource(R.string.today_subtitle, fuelLabel(fuel), modeLabel(mode)) else fuelLabel(fuel)
-
 @Composable
 fun brandGroupLabel(group: BrandGroup): String = group.canonical ?: stringResource(R.string.brand_altri)
 

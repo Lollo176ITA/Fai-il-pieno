@@ -72,7 +72,6 @@ import it.faiilpieno.ui.format.Fmt
 import it.faiilpieno.ui.format.deltaSpoken
 import it.faiilpieno.ui.format.distanceText
 import it.faiilpieno.ui.format.eurosText
-import it.faiilpieno.ui.format.fuelAndModeLabel
 import it.faiilpieno.ui.format.fuelLabel
 import it.faiilpieno.ui.format.kmText
 import it.faiilpieno.ui.format.priceSpoken
@@ -138,10 +137,9 @@ fun TodayScreen(onOpenCar: () -> Unit, onOpenCommute: (Long) -> Unit, viewModel:
 @Composable
 private fun Header(state: TodayUiState, onRefuel: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-        val fuel = fuelAndModeLabel(state.car.fuel, state.car.serviceMode)
+        // Carburante e modalità sono quelli impostati dall'utente: resta solo la data dei prezzi.
         Text(
-            // La data dei prezzi resta sempre in vista: sono quelli delle 8 del giorno indicato.
-            state.dataset?.let { stringResource(R.string.today_header, fuel, Fmt.dayMonth(it.extractionDate)) } ?: fuel,
+            state.dataset?.let { stringResource(R.string.today_header, Fmt.dayMonth(it.extractionDate)) }.orEmpty(),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f).padding(vertical = 8.dp),
@@ -471,7 +469,6 @@ private fun ListHeader(count: Int, radiusMeters: Double, state: TodayUiState, on
                 count,
                 count,
                 distanceText(radiusMeters),
-                fuelAndModeLabel(state.car.fuel, state.car.serviceMode),
             ),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

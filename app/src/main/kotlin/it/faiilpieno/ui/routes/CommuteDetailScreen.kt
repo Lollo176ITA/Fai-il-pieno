@@ -55,7 +55,6 @@ import it.faiilpieno.ui.components.rememberFullSheetState
 import it.faiilpieno.ui.map.rememberMapCameraState
 import it.faiilpieno.ui.format.Fmt
 import it.faiilpieno.ui.format.distanceText
-import it.faiilpieno.ui.format.fuelAndModeLabel
 import it.faiilpieno.ui.format.fuelLabel
 import it.faiilpieno.ui.settings.PreferencesViewModel
 import it.faiilpieno.ui.settings.RoutePreferencesCard
@@ -257,7 +256,6 @@ private fun ListHeader(result: CommuteResult, state: CommuteDetailState, onSort:
                 result.offers.size,
                 result.offers.size,
                 distanceText(state.bufferMeters.toDouble()),
-                fuelAndModeLabel(state.car.fuel, state.car.serviceMode),
             ),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
