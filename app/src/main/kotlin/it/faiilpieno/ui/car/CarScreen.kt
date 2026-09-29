@@ -55,6 +55,7 @@ import it.faiilpieno.ui.format.fuelLabel
 import it.faiilpieno.ui.format.modeLabel
 import it.faiilpieno.ui.format.quantityUnitLabel
 import it.faiilpieno.ui.settings.BrandFilterSheet
+import it.faiilpieno.ui.settings.CreditsSection
 import it.faiilpieno.ui.settings.PreferencesViewModel
 import it.faiilpieno.ui.settings.RoutePreferencesCard
 
@@ -95,6 +96,9 @@ fun CarScreen(viewModel: CarViewModel = hiltViewModel(), preferencesViewModel: P
             }
             SettingsGroup(stringResource(R.string.car_data_title)) {
                 DataSection(dataInfo, onRefresh = viewModel::refreshData)
+            }
+            SettingsGroup(stringResource(R.string.credits_title)) {
+                CreditsSection()
             }
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))

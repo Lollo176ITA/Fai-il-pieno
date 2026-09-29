@@ -77,6 +77,11 @@ kotlinx.serialization, MapLibre + OpenFreeMap. AGP 9 con Kotlin integrato (nient
 - UI della fase 3 (scelte dell'utente): card Serbatoio in cima alle Impostazioni con "Ho fatto il
   pieno"; avviso in Oggi quando la riserva è entro 3 giorni; "Ho fatto il pieno qui" nel dettaglio
   del distributore. Permesso notifiche chiesto dopo il primo pieno registrato, poi interruttore.
+- Attribuzioni (scelta dell'utente): crediti completi (MIMIT, OSM, OpenFreeMap, ORS, MapLibre) solo in
+  Impostazioni → Informazioni e crediti; su ogni mappa un pulsante ⓘ con legenda e crediti OSM (la
+  licenza ODbL li vuole raggiungibili dalla mappa). La data dei prezzi resta nell'intestazione di Oggi.
+- Import MIMIT sempre nazionale (scelta dell'utente): i file esistono solo per tutta Italia, filtrare
+  per regione risparmierebbe solo spazio e lascerebbe vuota Oggi fuori zona.
 - Notifica: `ReserveCheckWorker` ogni giorno alle 18:30, se la riserva è entro 2 giorni (stima di
   domani mattina), al massimo una al giorno, con il distributore consigliato sul primo tragitto.
 

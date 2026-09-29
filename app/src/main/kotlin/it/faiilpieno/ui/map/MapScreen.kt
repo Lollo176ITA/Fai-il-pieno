@@ -116,6 +116,7 @@ fun MapScreen(onOpenCommute: (Long) -> Unit, viewModel: MapViewModel = hiltViewM
     var selectedStation by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedRoute by rememberSaveable { mutableStateOf<Long?>(null) }
     var showRoutes by rememberSaveable { mutableStateOf(false) }
+    var showInfo by rememberSaveable { mutableStateOf(false) }
     val camera = rememberMapCameraState()
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     var style by remember { mutableStateOf<Style?>(null) }
@@ -225,7 +226,7 @@ fun MapScreen(onOpenCommute: (Long) -> Unit, viewModel: MapViewModel = hiltViewM
         MapOverlay(state,
             selected = state.commutes.firstOrNull { it.id == selectedRoute },
             onRoutes = { showRoutes = true }, onClearRoute = { selectedRoute = null },
-            onFitRoute = ::focus, onOpenCommute = onOpenCommute,
+            onFitRoute = ::focus, onOpenCommute = onOpenCommute, onInfo = { showInfo = true },
             onLocate = {
                 scope.launch {
                     val user = viewModel.locateUser() ?: return@launch
@@ -261,12 +262,13 @@ fun MapScreen(onOpenCommute: (Long) -> Unit, viewModel: MapViewModel = hiltViewM
         }
     }
     selectedStation?.let { id -> StationDetailSheet(id, onDismiss = { selectedStation = null }) }
+    if (showInfo) MapInfoSheet(state.dataset, showLegend = true, onDismiss = { showInfo = false })
 }
 
 @Composable
 private fun MapOverlay(
     state: MapUiState, selected: Commute?, onRoutes: () -> Unit, onClearRoute: () -> Unit,
-    onFitRoute: (Commute) -> Unit, onOpenCommute: (Long) -> Unit, onLocate: () -> Unit,
+    onFitRoute: (Commute) -> Unit, onOpenCommute: (Long) -> Unit, onLocate: () -> Unit, onInfo: () -> Unit,
 ) {
     Box(Modifier.fillMaxSize().safeDrawingPadding().padding(12.dp)) {
         Surface(
@@ -287,9 +289,9 @@ private fun MapOverlay(
                 val hint = when {
                     state.dataset == null -> stringResource(R.string.map_no_data)
                     state.zoomTooLow -> stringResource(R.string.map_zoom_in_hint)
-                    else -> "▼ " + stringResource(R.string.map_legend_below) + "   ▲ " + stringResource(R.string.map_legend_above)
+                    else -> null
                 }
-                Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (hint != null) Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (selected != null) {
                     HorizontalDivider(Modifier.padding(vertical = 8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -312,18 +314,7 @@ private fun MapOverlay(
             Icon(painterResource(R.drawable.ic_my_location), contentDescription = stringResource(R.string.map_my_location))
         }
 
-        Surface(
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-            shape = MaterialTheme.shapes.small,
-            modifier = Modifier.align(Alignment.BottomStart),
-        ) {
-            Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                state.dataset?.let {
-                    Text(stringResource(R.string.source_short, Fmt.dayMonth(it.extractionDate)), style = MaterialTheme.typography.labelSmall)
-                }
-                Text(stringResource(R.string.map_attribution), style = MaterialTheme.typography.labelSmall)
-            }
-        }
+        MapInfoButton(onClick = onInfo, modifier = Modifier.align(Alignment.BottomStart))
     }
 }
 

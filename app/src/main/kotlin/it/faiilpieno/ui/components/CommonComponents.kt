@@ -38,8 +38,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import it.faiilpieno.R
-import it.faiilpieno.domain.model.DatasetInfo
-import it.faiilpieno.ui.format.Fmt
 
 /** Stato vuoto / di errore a tutta pagina: icona, titolo, spiegazione e al massimo un'azione. */
 @Composable
@@ -167,27 +165,6 @@ fun <T> ConnectedChoiceRow(
             ) {
                 Text(label(option), textAlign = TextAlign.Center)
             }
-        }
-    }
-}
-
-/** Attribuzione obbligatoria (licenza IODL 2.0): fonte e data dei dati. */
-@Composable
-fun SourceAttribution(info: DatasetInfo?, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            stringResource(R.string.source_attribution),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        if (info != null) {
-            Text(
-                stringResource(R.string.source_date, Fmt.dayMonthYear(info.extractionDate)),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
         }
     }
 }

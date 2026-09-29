@@ -68,7 +68,6 @@ import it.faiilpieno.ui.components.InfoBanner
 import it.faiilpieno.ui.components.LoadingState
 import it.faiilpieno.ui.components.PriceDeltaBadge
 import it.faiilpieno.ui.components.PriceText
-import it.faiilpieno.ui.components.SourceAttribution
 import it.faiilpieno.ui.format.Fmt
 import it.faiilpieno.ui.format.deltaSpoken
 import it.faiilpieno.ui.format.distanceText
@@ -128,7 +127,6 @@ fun TodayScreen(onOpenCar: () -> Unit, onOpenCommute: (Long) -> Unit, viewModel:
                 }
             }
             body(state, results, viewModel, onSelect = { selectedStation = it })
-            item(key = "source") { SourceAttribution(state.dataset) }
         }
     }
 
@@ -140,8 +138,10 @@ fun TodayScreen(onOpenCar: () -> Unit, onOpenCommute: (Long) -> Unit, viewModel:
 @Composable
 private fun Header(state: TodayUiState, onRefuel: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        val fuel = fuelAndModeLabel(state.car.fuel, state.car.serviceMode)
         Text(
-            fuelAndModeLabel(state.car.fuel, state.car.serviceMode),
+            // La data dei prezzi resta sempre in vista: sono quelli delle 8 del giorno indicato.
+            state.dataset?.let { stringResource(R.string.today_header, fuel, Fmt.dayMonth(it.extractionDate)) } ?: fuel,
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f).padding(vertical = 8.dp),

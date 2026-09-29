@@ -51,7 +51,6 @@ import it.faiilpieno.ui.components.ConnectedChoiceRow
 import it.faiilpieno.ui.components.EmptyState
 import it.faiilpieno.ui.components.InfoBanner
 import it.faiilpieno.ui.components.LoadingState
-import it.faiilpieno.ui.components.SourceAttribution
 import it.faiilpieno.ui.components.rememberFullSheetState
 import it.faiilpieno.ui.map.rememberMapCameraState
 import it.faiilpieno.ui.format.Fmt
@@ -147,7 +146,6 @@ fun CommuteDetailScreen(onBack: () -> Unit, onEdit: (Long) -> Unit, viewModel: C
                         Text(stringResource(R.string.commute_recompute), modifier = Modifier.padding(start = 8.dp))
                     }
                 }
-                item(key = "source") { SourceAttribution(state.dataset) }
             }
         }
     }

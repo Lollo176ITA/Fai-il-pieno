@@ -13,6 +13,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +30,8 @@ import it.faiilpieno.R
 import it.faiilpieno.domain.commute.Route
 import it.faiilpieno.ui.map.MapLifecycle
 import it.faiilpieno.ui.map.MapCameraState
+import it.faiilpieno.ui.map.MapInfoButton
+import it.faiilpieno.ui.map.MapInfoSheet
 import it.faiilpieno.ui.map.PersistMapCamera
 import it.faiilpieno.ui.map.fitMapPoints
 import it.faiilpieno.ui.map.mapStyleUrl
@@ -55,6 +58,7 @@ internal fun RouteMap(route: Route, camera: MapCameraState, modifier: Modifier =
     val halo = MaterialTheme.colorScheme.surface.toArgb()
     val view = remember { MapView(context).apply { onCreate(null) } }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
+    var showInfo by rememberSaveable { mutableStateOf(false) }
     MapLifecycle(view)
     PersistMapCamera(map, camera)
     val points = remember(route.points) { route.points.map { Point.fromLngLat(it.longitude, it.latitude) } }
@@ -70,6 +74,8 @@ internal fun RouteMap(route: Route, camera: MapCameraState, modifier: Modifier =
                 camera.position?.let { m.moveCamera(CameraUpdateFactory.newCameraPosition(it)) }
                 map = m
                 m.uiSettings.setTiltGesturesEnabled(false)
+                m.uiSettings.setAttributionEnabled(false)
+                m.uiSettings.setLogoEnabled(false)
                 m.setStyle(Style.Builder().fromUri(mapStyleUrl(dark))) { style ->
                     if (active && points.size >= 2) {
                         style.addSource(GeoJsonSource("route-line", LineString.fromLngLats(points)))
@@ -90,5 +96,7 @@ internal fun RouteMap(route: Route, camera: MapCameraState, modifier: Modifier =
         FilledTonalIconButton(onClick = { map?.let { fit(it) } }, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)) {
             Icon(painterResource(R.drawable.ic_route), stringResource(R.string.route_map_fit))
         }
+        MapInfoButton(onClick = { showInfo = true }, modifier = Modifier.align(Alignment.BottomStart).padding(8.dp))
     }
+    if (showInfo) MapInfoSheet(dataset = null, showLegend = false, onDismiss = { showInfo = false })
 }

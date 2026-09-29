@@ -101,9 +101,18 @@
 
     <!-- Fonte dati (licenza IODL 2.0) -->
     <string name="source_attribution">Fonte: Ministero delle Imprese e del Made in Italy</string>
-    <string name="source_date">Prezzi alle 8 del %1$s · Licenza IODL 2.0</string>
-    <string name="source_short">Fonte: MIMIT · prezzi del %1$s</string>
-    <string name="map_attribution">© OpenStreetMap · OpenFreeMap</string>
+    <string name="today_header">%1$s · prezzi del %2$s</string>
+    <string name="credits_title">Informazioni e crediti</string>
+    <string name="credits_prices_title">Prezzi dei carburanti</string>
+    <string name="credits_prices_text">Ministero delle Imprese e del Made in Italy, licenza IODL 2.0. Prezzi comunicati dai gestori alle 8 del mattino.</string>
+    <string name="credits_map_title">Dati della mappa</string>
+    <string name="credits_map_text">© OpenStreetMap contributors, licenza ODbL.</string>
+    <string name="credits_tiles_title">Mappe</string>
+    <string name="credits_tiles_text">OpenFreeMap, con lo schema OpenMapTiles.</string>
+    <string name="credits_routes_title">Percorsi e indirizzi</string>
+    <string name="credits_routes_text">openrouteservice © HeiGIT, con dati OpenStreetMap.</string>
+    <string name="credits_engine_title">Motore della mappa</string>
+    <string name="credits_engine_text">MapLibre Native, licenza BSD.</string>
 
     <!-- Dettaglio distributore -->
     <string name="detail_prices">Prezzi</string>
@@ -119,8 +128,14 @@
     <string name="map_my_location">Vai alla mia posizione</string>
     <string name="map_a11y">Mappa dei distributori con i prezzi. L\'elenco completo e accessibile è nella scheda Oggi.</string>
     <string name="map_no_data">Nessun dato scaricato: apri la scheda Oggi.</string>
-    <string name="map_legend_below">sotto media</string>
-    <string name="map_legend_above">sopra media</string>
+    <string name="map_info">Informazioni sulla mappa</string>
+    <string name="map_legend_cheaper">Sotto la media nazionale</string>
+    <string name="map_legend_pricier">Sopra la media nazionale</string>
+    <string name="map_legend_neutral">In linea con la media</string>
+    <string name="map_legend_sample" translatable="false">1,799</string>
+    <string name="map_info_credits">Dati della mappa © OpenStreetMap contributors · mappe OpenFreeMap e OpenMapTiles.</string>
+    <string name="map_info_osm_link">Licenza dei dati OpenStreetMap</string>
+    <string name="map_info_more">Tutti i crediti sono in Impostazioni → Informazioni e crediti.</string>
 
     <!-- La mia auto -->
     <string name="car_title">La tua auto</string>

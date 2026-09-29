@@ -59,8 +59,9 @@ kotlinx.serialization, MapLibre.
 - Pagina del dataset: <https://www.mimit.gov.it/it/open-data/elenco-dataset/carburanti-prezzi-praticati-e-anagrafica-degli-impianti>
 - `anagrafica_impianti_attivi.csv` e `prezzo_alle_8.csv`, pubblicati ogni mattina verso le 9
   con i prezzi in vigore alle 8 del giorno indicato nella prima riga (`Estrazione del AAAA-MM-GG`).
-- Licenza **IODL 2.0**: l'app mostra sempre "Fonte: Ministero delle Imprese e del Made in Italy"
-  e la data dei prezzi.
+- Licenza **IODL 2.0**: la fonte ("Ministero delle Imprese e del Made in Italy") è citata in
+  Impostazioni → Informazioni e crediti e nel pannello ⓘ della mappa; la data dei prezzi è sempre
+  in vista nell'intestazione della scheda Oggi.
 
 ### Formato gestito
 
@@ -132,7 +133,8 @@ non distruttiva dalla v3.
 ### Mappa
 
 Tile di [OpenFreeMap](https://openfreemap.org/) (gratuite, senza chiave), dati
-© [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors.
+© [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors. L'attribuzione è nel
+pulsante ⓘ di ogni mappa (con la legenda dei colori) e in Impostazioni → Informazioni e crediti.
 
 ## Pubblicazione (GitHub Actions)
 
